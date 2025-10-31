@@ -7,6 +7,13 @@ import {
   createApplicantReviewedNotification,
   createApplicantOnHoldNotification,
 } from '@/lib/whatsapp-notifier';
+import {
+  upsertApplicant,
+  getApplicantByExternalUserId,
+  addVerificationHistory,
+  extractDocumentFromExternalUserId,
+  type Applicant,
+} from '@/lib/supabase-db';
 
 const SUMSUB_WEBHOOK_SECRET = process.env.SUMSUB_WEBHOOK_SECRET!;
 
@@ -136,6 +143,34 @@ async function handleApplicantCreated(data: any) {
   console.log('Applicant created:', data.externalUserId);
   
   const verificationType = extractVerificationType(data.externalUserId);
+  const documentNumber = extractDocumentFromExternalUserId(data.externalUserId);
+
+  // Salvar no Supabase
+  try {
+    const applicantData: Applicant = {
+      external_user_id: data.externalUserId,
+      applicant_id: data.applicantId,
+      inspection_id: data.inspectionId,
+      applicant_type: verificationType,
+      current_status: 'created',
+      document_number: documentNumber || undefined,
+      sumsub_level_name: data.levelName,
+    };
+
+    const applicant = await upsertApplicant(applicantData);
+
+    // Adicionar ao histórico
+    await addVerificationHistory({
+      applicant_id: applicant.id!,
+      event_type: 'applicantCreated',
+      new_status: 'created',
+      webhook_payload: data,
+    });
+
+    console.log('✅ Applicant saved to database:', applicant.id);
+  } catch (error) {
+    console.error('❌ Failed to save applicant to database:', error);
+  }
 
   // Enviar notificação para WhatsApp
   const notification = createApplicantCreatedNotification({
@@ -144,11 +179,6 @@ async function handleApplicantCreated(data: any) {
   });
 
   await sendWhatsAppNotification(notification);
-
-  // TODO: Salvar no Supabase
-  // - Criar registro na tabela de verificações
-  // - Status: 'created'
-  // - Timestamp de criação
 }
 
 /**
@@ -165,7 +195,43 @@ async function handleApplicantPending(data: any) {
     ? `${applicantInfo.firstName} ${applicantInfo.lastName || ''}`.trim()
     : undefined;
   const email = applicantInfo.email;
+  const phone = applicantInfo.phone;
   const document = applicantInfo.idDocs?.[0]?.number;
+
+  // Atualizar no Supabase
+  try {
+    const existingApplicant = await getApplicantByExternalUserId(data.externalUserId);
+    
+    const applicantData: Applicant = {
+      external_user_id: data.externalUserId,
+      applicant_id: data.applicantId,
+      inspection_id: data.inspectionId,
+      applicant_type: verificationType,
+      current_status: 'pending',
+      full_name: name,
+      email: email,
+      phone: phone,
+      document_number: document || extractDocumentFromExternalUserId(data.externalUserId) || undefined,
+      first_verification_at: existingApplicant?.first_verification_at || new Date().toISOString(),
+      last_verification_at: new Date().toISOString(),
+      sumsub_level_name: data.levelName,
+    };
+
+    const applicant = await upsertApplicant(applicantData);
+
+    // Adicionar ao histórico
+    await addVerificationHistory({
+      applicant_id: applicant.id!,
+      event_type: 'applicantPending',
+      old_status: existingApplicant?.current_status,
+      new_status: 'pending',
+      webhook_payload: data,
+    });
+
+    console.log('✅ Applicant updated in database:', applicant.id);
+  } catch (error) {
+    console.error('❌ Failed to update applicant in database:', error);
+  }
 
   // Enviar notificação para WhatsApp
   const notification = createApplicantPendingNotification({
@@ -177,10 +243,6 @@ async function handleApplicantPending(data: any) {
   });
 
   await sendWhatsAppNotification(notification);
-
-  // TODO: Atualizar no Supabase
-  // - Status: 'pending'
-  // - Timestamp de submissão
 }
 
 /**
@@ -203,7 +265,66 @@ async function handleApplicantReviewed(data: any) {
     ? `${applicantInfo.firstName} ${applicantInfo.lastName || ''}`.trim()
     : undefined;
   const email = applicantInfo.email;
+  const phone = applicantInfo.phone;
   const document = applicantInfo.idDocs?.[0]?.number;
+
+  const reviewAnswer = reviewResult?.reviewAnswer || 'YELLOW';
+  const rejectionReason = reviewResult?.rejectLabels?.join(', ');
+
+  // Determinar status baseado no reviewAnswer
+  let currentStatus: 'approved' | 'rejected' | 'pending' = 'pending';
+  let approvedAt: string | undefined;
+  let rejectedAt: string | undefined;
+
+  if (reviewAnswer === 'GREEN') {
+    currentStatus = 'approved';
+    approvedAt = new Date().toISOString();
+  } else if (reviewAnswer === 'RED') {
+    currentStatus = 'rejected';
+    rejectedAt = new Date().toISOString();
+  }
+
+  // Atualizar no Supabase
+  try {
+    const existingApplicant = await getApplicantByExternalUserId(externalUserId);
+    
+    const applicantData: Applicant = {
+      external_user_id: externalUserId,
+      applicant_id: data.applicantId,
+      inspection_id: data.inspectionId,
+      applicant_type: verificationType,
+      current_status: currentStatus,
+      review_answer: reviewAnswer as 'GREEN' | 'RED' | 'YELLOW',
+      full_name: name,
+      email: email,
+      phone: phone,
+      document_number: document || extractDocumentFromExternalUserId(externalUserId) || undefined,
+      first_verification_at: existingApplicant?.first_verification_at || new Date().toISOString(),
+      last_verification_at: new Date().toISOString(),
+      approved_at: approvedAt,
+      rejected_at: rejectedAt,
+      sumsub_level_name: data.levelName,
+      sumsub_review_result: reviewResult,
+      rejection_reason: rejectionReason,
+    };
+
+    const applicant = await upsertApplicant(applicantData);
+
+    // Adicionar ao histórico
+    await addVerificationHistory({
+      applicant_id: applicant.id!,
+      event_type: 'applicantReviewed',
+      old_status: existingApplicant?.current_status,
+      new_status: currentStatus,
+      review_answer: reviewAnswer as 'GREEN' | 'RED' | 'YELLOW',
+      rejection_reason: rejectionReason,
+      webhook_payload: data,
+    });
+
+    console.log('✅ Applicant reviewed and saved:', applicant.id);
+  } catch (error) {
+    console.error('❌ Failed to save reviewed applicant:', error);
+  }
 
   // Enviar notificação para WhatsApp
   const notification = createApplicantReviewedNotification({
@@ -212,22 +333,11 @@ async function handleApplicantReviewed(data: any) {
     name,
     email,
     document,
-    reviewAnswer: reviewResult?.reviewAnswer || 'YELLOW',
+    reviewAnswer: reviewAnswer as 'GREEN' | 'RED' | 'YELLOW',
     reviewStatus,
   });
 
   await sendWhatsAppNotification(notification);
-
-  // TODO: Atualizar no Supabase
-  // - Status: reviewResult.reviewAnswer (GREEN, RED, etc.)
-  // - reviewStatus: reviewStatus (completed, etc.)
-  // - Timestamp de revisão
-  // - Detalhes da revisão
-
-  // TODO: Enviar e-mail de notificação
-  // - Se aprovado (GREEN): e-mail de boas-vindas
-  // - Se rejeitado (RED): e-mail explicando motivo
-  // - Se precisa de revisão: e-mail solicitando documentos adicionais
 }
 
 /**
@@ -244,7 +354,43 @@ async function handleApplicantOnHold(data: any) {
     ? `${applicantInfo.firstName} ${applicantInfo.lastName || ''}`.trim()
     : undefined;
   const email = applicantInfo.email;
+  const phone = applicantInfo.phone;
   const document = applicantInfo.idDocs?.[0]?.number;
+
+  // Atualizar no Supabase
+  try {
+    const existingApplicant = await getApplicantByExternalUserId(data.externalUserId);
+    
+    const applicantData: Applicant = {
+      external_user_id: data.externalUserId,
+      applicant_id: data.applicantId,
+      inspection_id: data.inspectionId,
+      applicant_type: verificationType,
+      current_status: 'onHold',
+      full_name: name,
+      email: email,
+      phone: phone,
+      document_number: document || extractDocumentFromExternalUserId(data.externalUserId) || undefined,
+      first_verification_at: existingApplicant?.first_verification_at || new Date().toISOString(),
+      last_verification_at: new Date().toISOString(),
+      sumsub_level_name: data.levelName,
+    };
+
+    const applicant = await upsertApplicant(applicantData);
+
+    // Adicionar ao histórico
+    await addVerificationHistory({
+      applicant_id: applicant.id!,
+      event_type: 'applicantOnHold',
+      old_status: existingApplicant?.current_status,
+      new_status: 'onHold',
+      webhook_payload: data,
+    });
+
+    console.log('✅ Applicant on hold saved:', applicant.id);
+  } catch (error) {
+    console.error('❌ Failed to save on hold applicant:', error);
+  }
 
   // Enviar notificação para WhatsApp
   const notification = createApplicantOnHoldNotification({
@@ -256,10 +402,5 @@ async function handleApplicantOnHold(data: any) {
   });
 
   await sendWhatsAppNotification(notification);
-
-  // TODO: Atualizar no Supabase
-  // - Status: 'on_hold'
-  // - Timestamp
-  // - Motivo (se disponível)
 }
 
