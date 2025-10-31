@@ -93,6 +93,11 @@ export default function CompanyVerification() {
       const data = await response.json();
       console.log('[DEBUG] Token recebido:', data.token ? 'SIM' : 'NÃO');
       
+      // Salvar tipo no localStorage para usar na página de sucesso
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('verificationType', 'company');
+      }
+      
       setAccessToken(data.token);
       setShowSDK(true);
       setIsLoading(false);

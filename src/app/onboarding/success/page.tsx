@@ -11,9 +11,19 @@ function SuccessContent() {
   const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
-    const type = searchParams.get('type');
-    if (type === 'company') {
-      setVerificationType('company');
+    // Tentar ler do parâmetro URL primeiro
+    const typeParam = searchParams.get('type');
+    if (typeParam === 'company' || typeParam === 'individual') {
+      setVerificationType(typeParam as 'individual' | 'company');
+      return;
+    }
+    
+    // Se não tiver no URL, ler do localStorage
+    if (typeof window !== 'undefined') {
+      const storedType = localStorage.getItem('verificationType');
+      if (storedType === 'company' || storedType === 'individual') {
+        setVerificationType(storedType as 'individual' | 'company');
+      }
     }
   }, [searchParams]);
 
