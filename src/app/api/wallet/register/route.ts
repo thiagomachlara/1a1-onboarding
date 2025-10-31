@@ -166,8 +166,8 @@ export async function POST(request: NextRequest) {
     // NOTIFICAÇÃO WHATSAPP
     // ========================================================================
 
-    // Criar mensagem de notificação incluindo resultado do screening
-    let notificationMessage = createWalletRegisteredNotification({
+    // Criar notificação incluindo resultado do screening no metadata
+    const notification = createWalletRegisteredNotification({
       externalUserId: applicant.external_user_id,
       verificationType: applicant.applicant_type,
       name: applicant.company_name || applicant.full_name,
@@ -175,25 +175,20 @@ export async function POST(request: NextRequest) {
       walletAddress,
     });
 
-    // Adicionar informações do screening à notificação
+    // Adicionar informações do screening ao metadata
     if (screeningResult) {
-      notificationMessage += `\n\n🔍 *Screening Chainalysis:*`;
-      notificationMessage += `\n• Decisão: ${screeningResult.decision === 'APPROVED' ? '✅ APROVADA' : screeningResult.decision === 'MANUAL_REVIEW' ? '⚠️ REVISÃO MANUAL' : '❌ REJEITADA'}`;
-      
-      if (screeningResult.riskLevel) {
-        notificationMessage += `\n• Nível de risco: ${screeningResult.riskLevel}`;
-      }
-      
-      if (screeningResult.isSanctioned) {
-        notificationMessage += `\n• ⚠️ WALLET SANCIONADA`;
-      }
-      
-      if (screeningResult.decision === 'MANUAL_REVIEW') {
-        notificationMessage += `\n• Razão: ${screeningResult.decisionReason}`;
-      }
+      notification.metadata = {
+        ...notification.metadata,
+        chainalysisScreening: {
+          decision: screeningResult.decision,
+          riskLevel: screeningResult.riskLevel,
+          isSanctioned: screeningResult.isSanctioned,
+          decisionReason: screeningResult.decisionReason,
+        },
+      };
     }
 
-    await sendWhatsAppNotification(notificationMessage);
+    await sendWhatsAppNotification(notification);
 
     console.log('✅ Wallet registered successfully:', applicant.id, walletAddress);
 
