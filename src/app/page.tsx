@@ -72,7 +72,7 @@ export default function Home() {
                   </h3>
                   <p className="text-gray-600">
                     Faça upload dos documentos necessários de forma segura
-                  p>
+                  </p>
                 </div>
               </div>
 
