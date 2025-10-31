@@ -33,10 +33,18 @@ function verifyWebhookSignature(
 }
 
 /**
- * Extrai tipo de verificação do externalUserId
+ * Extrai tipo de verificação do payload do Sumsub
+ * Prioriza o campo applicantType do payload, depois o prefixo do externalUserId
  */
-function extractVerificationType(externalUserId: string): 'individual' | 'company' {
-  // Novo formato com CPF/CNPJ
+function extractVerificationType(data: any): 'individual' | 'company' {
+  // 1. Tentar usar applicantType do payload (fonte mais confiável)
+  if (data.applicantType) {
+    return data.applicantType === 'company' ? 'company' : 'individual';
+  }
+  
+  // 2. Fallback para prefixo do externalUserId
+  const externalUserId = data.externalUserId || '';
+  
   if (externalUserId.startsWith('cpf_')) {
     return 'individual';
   }
@@ -53,6 +61,24 @@ function extractVerificationType(externalUserId: string): 'individual' | 'compan
   }
   
   return 'individual'; // fallback
+}
+
+/**
+ * Extrai nome completo (PF) ou razão social (PJ) do payload
+ */
+function extractName(data: any, verificationType: 'individual' | 'company'): string | undefined {
+  if (verificationType === 'company') {
+    // Para PJ: buscar companyName
+    return data.info?.companyInfo?.companyName || 
+           data.companyInfo?.companyName ||
+           data.info?.company?.companyName;
+  } else {
+    // Para PF: buscar firstName + lastName
+    const firstName = data.info?.firstName || data.firstName || '';
+    const lastName = data.info?.lastName || data.lastName || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName || undefined;
+  }
 }
 
 /**
@@ -142,7 +168,7 @@ export async function POST(request: NextRequest) {
 async function handleApplicantCreated(data: any) {
   console.log('Applicant created:', data.externalUserId);
   
-  const verificationType = extractVerificationType(data.externalUserId);
+  const verificationType = extractVerificationType(data);
   const documentNumber = extractDocumentFromExternalUserId(data.externalUserId);
 
   // Salvar no Supabase
@@ -187,16 +213,13 @@ async function handleApplicantCreated(data: any) {
 async function handleApplicantPending(data: any) {
   console.log('Applicant pending:', data.externalUserId);
   
-  const verificationType = extractVerificationType(data.externalUserId);
+  const verificationType = extractVerificationType(data);
 
-  // Extrair informações do applicant (se disponível)
-  const applicantInfo = data.applicantInfo || {};
-  const name = applicantInfo.firstName 
-    ? `${applicantInfo.firstName} ${applicantInfo.lastName || ''}`.trim()
-    : undefined;
-  const email = applicantInfo.email;
-  const phone = applicantInfo.phone;
-  const document = applicantInfo.idDocs?.[0]?.number;
+  // Extrair informações do applicant (usando nova função)
+  const name = extractName(data, verificationType);
+  const email = data.info?.email || data.email;
+  const phone = data.info?.phone || data.phone;
+  const document = data.info?.idDocs?.[0]?.number || data.idDocs?.[0]?.number;
 
   // Atualizar no Supabase
   try {
@@ -257,16 +280,22 @@ async function handleApplicantReviewed(data: any) {
     status: reviewStatus,
   });
 
-  const verificationType = extractVerificationType(externalUserId);
+  const verificationType = extractVerificationType(data);
 
-  // Extrair informações do applicant
-  const applicantInfo = data.applicantInfo || {};
-  const name = applicantInfo.firstName 
-    ? `${applicantInfo.firstName} ${applicantInfo.lastName || ''}`.trim()
-    : undefined;
-  const email = applicantInfo.email;
-  const phone = applicantInfo.phone;
-  const document = applicantInfo.idDocs?.[0]?.number;
+  // Extrair informações do applicant (usando nova função)
+  let name = extractName(data, verificationType);
+  let email = data.info?.email || data.email;
+  let phone = data.info?.phone || data.phone;
+  let document = data.info?.idDocs?.[0]?.number || data.idDocs?.[0]?.number;
+  
+  // Buscar dados do banco se não vieram no payload
+  const existingApplicant = await getApplicantByExternalUserId(externalUserId);
+  if (existingApplicant) {
+    name = name || existingApplicant.full_name;
+    email = email || existingApplicant.email;
+    phone = phone || existingApplicant.phone;
+    document = document || existingApplicant.document_number;
+  }
 
   const reviewAnswer = reviewResult?.reviewAnswer || 'YELLOW';
   const rejectionReason = reviewResult?.rejectLabels?.join(', ');
@@ -346,20 +375,25 @@ async function handleApplicantReviewed(data: any) {
 async function handleApplicantOnHold(data: any) {
   console.log('Applicant on hold:', data.externalUserId);
   
-  const verificationType = extractVerificationType(data.externalUserId);
+  const verificationType = extractVerificationType(data);
 
-  // Extrair informações do applicant
-  const applicantInfo = data.applicantInfo || {};
-  const name = applicantInfo.firstName 
-    ? `${applicantInfo.firstName} ${applicantInfo.lastName || ''}`.trim()
-    : undefined;
-  const email = applicantInfo.email;
-  const phone = applicantInfo.phone;
-  const document = applicantInfo.idDocs?.[0]?.number;
+  // Extrair informações do applicant (usando nova função)
+  let name = extractName(data, verificationType);
+  let email = data.info?.email || data.email;
+  let phone = data.info?.phone || data.phone;
+  let document = data.info?.idDocs?.[0]?.number || data.idDocs?.[0]?.number;
+  
+  // Buscar dados do banco se não vieram no payload
+  const existingApplicant = await getApplicantByExternalUserId(data.externalUserId);
+  if (existingApplicant) {
+    name = name || existingApplicant.full_name;
+    email = email || existingApplicant.email;
+    phone = phone || existingApplicant.phone;
+    document = document || existingApplicant.document_number;
+  }
 
   // Atualizar no Supabase
   try {
-    const existingApplicant = await getApplicantByExternalUserId(data.externalUserId);
     
     const applicantData: Applicant = {
       external_user_id: data.externalUserId,
