@@ -29,12 +29,22 @@ function verifyWebhookSignature(
  * Extrai tipo de verificação do externalUserId
  */
 function extractVerificationType(externalUserId: string): 'individual' | 'company' {
+  // Novo formato com CPF/CNPJ
+  if (externalUserId.startsWith('cpf_')) {
+    return 'individual';
+  }
+  if (externalUserId.startsWith('cnpj_')) {
+    return 'company';
+  }
+  
+  // Formato antigo (retrocompatibilidade)
   if (externalUserId.startsWith('individual_')) {
     return 'individual';
   }
   if (externalUserId.startsWith('company_')) {
     return 'company';
   }
+  
   return 'individual'; // fallback
 }
 
