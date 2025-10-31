@@ -371,22 +371,24 @@ async function handleApplicantReviewed(data: any) {
       webhook_payload: data,
     });
 
-    // Se aprovado, gerar magic link para contrato
-    let contractLink: string | undefined;
-    if (reviewAnswer === 'GREEN' && applicant.id) {
-      try {
-        const token = await generateContractToken(applicant.id);
-        contractLink = generateContractLink(token);
-        console.log('✅ Magic link gerado para contrato:', contractLink);
-      } catch (error) {
-        console.error('❌ Erro ao gerar magic link:', error);
-      }
-    }
-
     console.log('✅ Applicant reviewed and saved:', applicant.id);
   } catch (error) {
     console.error('❌ Failed to save reviewed applicant:', error);
-    contractLink = undefined; // Não enviar link se houve erro
+  }
+
+  // Se aprovado, gerar magic link para contrato
+  let contractLink: string | undefined;
+  if (reviewAnswer === 'GREEN') {
+    try {
+      const applicant = await getApplicantByExternalUserId(externalUserId);
+      if (applicant?.id) {
+        const token = await generateContractToken(applicant.id);
+        contractLink = generateContractLink(token);
+        console.log('✅ Magic link gerado para contrato:', contractLink);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao gerar magic link:', error);
+    }
   }
 
   // Enviar notificação para WhatsApp
