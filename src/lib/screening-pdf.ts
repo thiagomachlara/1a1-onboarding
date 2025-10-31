@@ -70,14 +70,14 @@ const categoryTranslations: Record<string, string> = {
   'infrastructure as a service': 'Infraestrutura como Serviço',
   'protocol privacy': 'Protocolo de Privacidade',
   'unspent': 'Não Gasto',
-  'sanctioned entity': '⚠ Entidade Sancionada',
-  'sanctioned jurisdiction': '⚠ Jurisdição Sancionada',
-  'illicit actor-org': '⚠ Ator Ilícito',
-  'stolen funds': '⚠ Fundos Roubados',
-  'terrorist financing': '⚠ Financiamento Terrorista',
-  'scam': '⚠ Fraude',
-  'special measures': '⚠ Medidas Especiais',
-  'escort service': '⚠ Serviço de Acompanhantes',
+  'sanctioned entity': '[ALERTA] Entidade Sancionada',
+  'sanctioned jurisdiction': '[ALERTA] Jurisdicao Sancionada',
+  'illicit actor-org': '[ALERTA] Ator Ilicito',
+  'stolen funds': '[ALERTA] Fundos Roubados',
+  'terrorist financing': '[ALERTA] Financiamento Terrorista',
+  'scam': '[ALERTA] Fraude',
+  'special measures': '[ALERTA] Medidas Especiais',
+  'escort service': '[ALERTA] Servico de Acompanhantes',
 };
 
 /**
@@ -306,15 +306,15 @@ export async function generateScreeningPDF(
     
     switch (screeningResult.decision) {
       case 'APPROVED':
-        decisionText = '✓ APROVADA';
+        decisionText = 'APROVADA';
         decisionColor = rgb(0, 0.6, 0);
         break;
       case 'REJECTED':
-        decisionText = '✗ REJEITADA';
+        decisionText = 'REJEITADA';
         decisionColor = rgb(0.8, 0, 0);
         break;
       case 'MANUAL_REVIEW':
-        decisionText = '⚠ REVISÃO MANUAL';
+        decisionText = 'REVISAO MANUAL';
         decisionColor = rgb(0.8, 0.6, 0);
         break;
     }
@@ -392,7 +392,7 @@ export async function generateScreeningPDF(
         const categoryName = categoryTranslations[exposure.category.toLowerCase()] || exposure.category;
         
         // Destacar categorias de risco
-        const textColor = categoryName.startsWith('⚠') ? rgb(0.8, 0, 0) : rgb(0, 0, 0);
+        const textColor = categoryName.startsWith('[ALERTA]') ? rgb(0.8, 0, 0) : rgb(0, 0, 0);
         
         page.drawText(categoryName, {
           x: margin,
