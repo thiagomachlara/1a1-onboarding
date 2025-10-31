@@ -14,6 +14,12 @@ import {
   extractDocumentFromExternalUserId,
   type Applicant,
 } from '@/lib/supabase-db';
+import { consultarCNPJ, formatarEndereco, formatarTelefone } from '@/lib/brasilapi';
+import {
+  generateContractToken,
+  generateContractLink,
+  generateWalletToken,
+} from '@/lib/magic-links';
 
 const SUMSUB_WEBHOOK_SECRET = process.env.SUMSUB_WEBHOOK_SECRET!;
 
@@ -171,6 +177,20 @@ async function handleApplicantCreated(data: any) {
   const verificationType = extractVerificationType(data);
   const documentNumber = extractDocumentFromExternalUserId(data.externalUserId);
 
+  // Se for PJ, consultar BrasilAPI para pegar razão social
+  let companyName: string | undefined;
+  if (verificationType === 'company' && documentNumber) {
+    try {
+      const cnpjData = await consultarCNPJ(documentNumber);
+      if (cnpjData) {
+        companyName = cnpjData.razao_social;
+        console.log('✅ Dados da empresa obtidos via BrasilAPI:', companyName);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao consultar BrasilAPI:', error);
+    }
+  }
+
   // Salvar no Supabase
   try {
     const applicantData: Applicant = {
@@ -180,6 +200,7 @@ async function handleApplicantCreated(data: any) {
       applicant_type: verificationType,
       current_status: 'created',
       document_number: documentNumber || undefined,
+      company_name: companyName,
       sumsub_level_name: data.levelName,
     };
 
@@ -350,9 +371,22 @@ async function handleApplicantReviewed(data: any) {
       webhook_payload: data,
     });
 
+    // Se aprovado, gerar magic link para contrato
+    let contractLink: string | undefined;
+    if (reviewAnswer === 'GREEN' && applicant.id) {
+      try {
+        const token = await generateContractToken(applicant.id);
+        contractLink = generateContractLink(token);
+        console.log('✅ Magic link gerado para contrato:', contractLink);
+      } catch (error) {
+        console.error('❌ Erro ao gerar magic link:', error);
+      }
+    }
+
     console.log('✅ Applicant reviewed and saved:', applicant.id);
   } catch (error) {
     console.error('❌ Failed to save reviewed applicant:', error);
+    contractLink = undefined; // Não enviar link se houve erro
   }
 
   // Enviar notificação para WhatsApp
@@ -364,6 +398,7 @@ async function handleApplicantReviewed(data: any) {
     document,
     reviewAnswer: reviewAnswer as 'GREEN' | 'RED' | 'YELLOW',
     reviewStatus,
+    contractLink, // Adicionar magic link se aprovado
   });
 
   await sendWhatsAppNotification(notification);
