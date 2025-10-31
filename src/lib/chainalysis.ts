@@ -234,22 +234,24 @@ export async function performWalletScreening(
   const timestamp = new Date().toISOString();
 
   try {
-    // 1. VERIFICAR SANÇÕES (GRATUITO, OBRIGATÓRIO)
-    console.log(`[Chainalysis] Verificando sanções para ${address}`);
-    const sanctionsResult = await checkSanctions(address);
-    const sanctioned = sanctionsResult.identifications.length > 0;
-
-    if (sanctioned) {
-      console.log(`[Chainalysis] Wallet ${address} está SANCIONADA`);
-      return {
-        address,
-        isSanctioned: true,
-        sanctionDetails: sanctionsResult.identifications,
-        decision: 'REJECTED',
-        decisionReason: `Wallet está em lista de sanções: ${sanctionsResult.identifications[0].name}`,
-        timestamp,
-      };
-    }
+    // NOTA: Free Sanctions API desabilitada temporariamente (precisa de API key separada)
+    // A Address Screening API já detecta sanções nas exposições ("sanctioned entity")
+    
+    // 1. VERIFICAR SANÇÕES (DESABILITADO)
+    // console.log(`[Chainalysis] Verificando sanções para ${address}`);
+    // const sanctionsResult = await checkSanctions(address);
+    // const sanctioned = sanctionsResult.identifications.length > 0;
+    // if (sanctioned) {
+    //   console.log(`[Chainalysis] Wallet ${address} está SANCIONADA`);
+    //   return {
+    //     address,
+    //     isSanctioned: true,
+    //     sanctionDetails: sanctionsResult.identifications,
+    //     decision: 'REJECTED',
+    //     decisionReason: `Wallet está em lista de sanções: ${sanctionsResult.identifications[0].name}`,
+    //     timestamp,
+    //   };
+    // }
 
     // 2. AVALIAR RISCO (PAGO)
     console.log(`[Chainalysis] Avaliando risco para ${address}`);

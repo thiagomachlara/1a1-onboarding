@@ -240,7 +240,20 @@ async function handleApplicantPending(data: any) {
   const name = extractName(data, verificationType);
   const email = data.info?.email || data.email;
   const phone = data.info?.phone || data.phone;
-  const document = data.info?.idDocs?.[0]?.number || data.idDocs?.[0]?.number;
+  
+  // Extrair documento (diferente para PF e PJ)
+  let document: string | undefined;
+  if (verificationType === 'company') {
+    // Para PJ: buscar CNPJ no companyInfo ou no externalUserId
+    document = data.info?.companyInfo?.registrationNumber ||
+               data.companyInfo?.registrationNumber ||
+               extractDocumentFromExternalUserId(data.externalUserId);
+  } else {
+    // Para PF: buscar CPF no idDocs ou no externalUserId
+    document = data.info?.idDocs?.[0]?.number || 
+               data.idDocs?.[0]?.number ||
+               extractDocumentFromExternalUserId(data.externalUserId);
+  }
 
   // Atualizar no Supabase
   try {
@@ -252,10 +265,11 @@ async function handleApplicantPending(data: any) {
       inspection_id: data.inspectionId,
       applicant_type: verificationType,
       current_status: 'pending',
-      full_name: name,
+      full_name: verificationType === 'individual' ? name : undefined,
+      company_name: verificationType === 'company' ? name : undefined,
       email: email,
       phone: phone,
-      document_number: document || extractDocumentFromExternalUserId(data.externalUserId) || undefined,
+      document_number: document,
       first_verification_at: existingApplicant?.first_verification_at || new Date().toISOString(),
       last_verification_at: new Date().toISOString(),
       sumsub_level_name: data.levelName,
