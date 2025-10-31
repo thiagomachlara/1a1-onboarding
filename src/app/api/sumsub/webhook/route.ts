@@ -8,7 +8,7 @@ import {
   createApplicantOnHoldNotification,
 } from '@/lib/whatsapp-notifier';
 
-const SUMSUB_SECRET_KEY = process.env.SUMSUB_SECRET_KEY!;
+const SUMSUB_WEBHOOK_SECRET = process.env.SUMSUB_WEBHOOK_SECRET!;
 
 /**
  * Verifica a assinatura do webhook do Sumsub
@@ -18,7 +18,7 @@ function verifyWebhookSignature(
   signature: string
 ): boolean {
   const expectedSignature = crypto
-    .createHmac('sha256', SUMSUB_SECRET_KEY)
+    .createHmac('sha256', SUMSUB_WEBHOOK_SECRET)
     .update(payload)
     .digest('hex');
   
