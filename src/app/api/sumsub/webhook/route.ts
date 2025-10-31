@@ -39,6 +39,18 @@ function extractVerificationType(externalUserId: string): 'individual' | 'compan
 }
 
 /**
+ * GET endpoint para validação do webhook pelo Sumsub
+ * Retorna 200 OK para permitir que o Sumsub valide a URL
+ */
+export async function GET() {
+  return NextResponse.json({ 
+    status: 'ok',
+    message: 'Sumsub webhook endpoint is active',
+    timestamp: new Date().toISOString()
+  });
+}
+
+/**
  * Webhook endpoint para receber notificações do Sumsub
  * POST /api/sumsub/webhook
  * 
