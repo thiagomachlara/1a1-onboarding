@@ -96,7 +96,7 @@ export default function ScreeningPage() {
                 id="wallet"
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
-                placeholder="TXRUVnwEZbtRvfZ7DVd1KmrG2RDxjCUU4y"
+                placeholder=""
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
                 required
                 disabled={loading}
@@ -116,7 +116,7 @@ export default function ScreeningPage() {
                 id="memo"
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
-                placeholder="Ex: GS Pay, João Silva, Empresa XYZ"
+                placeholder="Ex: Cliente ABC, Empresa XYZ"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
                 disabled={loading}
