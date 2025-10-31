@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { performWalletScreening, formatScreeningResult } from '@/lib/chainalysis';
+import { performWalletScreening } from '@/lib/chainalysis';
 import { generateScreeningPDF, generateScreeningPDFFilename } from '@/lib/screening-pdf';
 import { sendWhatsAppNotification, createWalletRegisteredNotification } from '@/lib/whatsapp-notifier';
 import { createClient } from '@supabase/supabase-js';
@@ -54,17 +54,16 @@ export async function GET(request: NextRequest) {
     
     try {
       const screeningResult = await performWalletScreening(walletAddress);
-      const formattedResult = formatScreeningResult(screeningResult);
       
       results.screening = {
         success: true,
-        decision: formattedResult.decision,
-        riskLevel: formattedResult.riskLevel,
-        isSanctioned: formattedResult.isSanctioned,
-        exposuresCount: formattedResult.exposures.length,
+        decision: screeningResult.decision,
+        riskLevel: screeningResult.riskLevel,
+        isSanctioned: screeningResult.isSanctioned,
+        exposuresCount: screeningResult.exposures?.length || 0,
       };
 
-      console.log(`[Test] Screening concluído: ${formattedResult.decision} (${formattedResult.riskLevel})`);
+      console.log(`[Test] Screening concluído: ${screeningResult.decision} (${screeningResult.riskLevel})`);
 
       // ========================================================================
       // PASSO 2: GERAR PDF
@@ -75,7 +74,7 @@ export async function GET(request: NextRequest) {
         const pdfBuffer = await generateScreeningPDF(
           testClient,
           walletAddress,
-          formattedResult
+          screeningResult
         );
         
         results.pdf = {
@@ -137,9 +136,9 @@ export async function GET(request: NextRequest) {
               walletAddress,
               {
                 chainalysisScreening: {
-                  decision: formattedResult.decision,
-                  riskLevel: formattedResult.riskLevel,
-                  isSanctioned: formattedResult.isSanctioned,
+                  decision: screeningResult.decision,
+                  riskLevel: screeningResult.riskLevel,
+                  isSanctioned: screeningResult.isSanctioned,
                   pdfUrl: signedUrlData.signedUrl,
                 },
               }
