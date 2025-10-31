@@ -450,12 +450,18 @@ export function createWalletScreeningNotification(
       id: `manual_${Date.now()}`,
       type: 'company',
       name: clientName,
+      // Não incluir document se não tiver valor
     },
     status,
     walletAddress,
     message: `Screening manual de wallet: ${screening.decision}`,
     metadata: {
-      chainalysisScreening: screening,
+      chainalysisScreening: {
+        decision: screening.decision,
+        riskLevel: screening.riskLevel,
+        isSanctioned: screening.isSanctioned,
+        pdfUrl: screening.pdfUrl,
+      },
     },
   };
 }
