@@ -444,10 +444,8 @@ async function handleApplicantReviewed(data: any) {
     );
     
     // 2. Fazer upload para Supabase Storage
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabase = createClient();
     
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const shortId = data.applicantId.substring(0, 8);
