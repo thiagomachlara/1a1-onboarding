@@ -51,9 +51,11 @@ export async function POST(request: NextRequest) {
     let screeningResult;
     try {
       // Realizar screening completo (sanções + risco)
+      // Usar nome do cliente como memo para identificação no painel Chainalysis
+      const clientName = applicant.company_name || applicant.full_name || applicant.external_user_id;
       screeningResult = await performWalletScreening(
         walletAddress,
-        `applicant_${applicant.id}`
+        clientName
       );
 
       console.log('[Wallet Registration] Resultado do screening:');

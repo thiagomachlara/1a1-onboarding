@@ -424,3 +424,39 @@ export function createWalletRegisteredNotification(data: {
   };
 }
 
+
+/**
+ * Cria notificação para screening manual de wallet
+ */
+export function createWalletScreeningNotification(
+  clientName: string,
+  walletAddress: string,
+  screening: {
+    decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
+    riskLevel?: string;
+    isSanctioned: boolean;
+    pdfUrl?: string;
+  }
+): OnboardingNotification {
+  // Determinar status baseado na decisão
+  let status: 'approved' | 'rejected' | 'under_review' = 'under_review';
+  if (screening.decision === 'APPROVED') status = 'approved';
+  if (screening.decision === 'REJECTED') status = 'rejected';
+
+  return {
+    event: 'wallet_registered',
+    timestamp: new Date().toISOString(),
+    applicant: {
+      id: `manual_${Date.now()}`,
+      type: 'company',
+      name: clientName,
+    },
+    status,
+    walletAddress,
+    message: `Screening manual de wallet: ${screening.decision}`,
+    metadata: {
+      chainalysisScreening: screening,
+    },
+  };
+}
+
