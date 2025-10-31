@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 
-const SUMSUB_APP_TOKEN = 'prd:STgChi9fjCc4PTYVHq0Rqbcy.09XWOcvwkTVgizTaqnGQLpu4W5tr';
-const SUMSUB_SECRET_KEY = 'Bm6KTRHCDWZwJ3IpMlnLnnJPydIClHx';
+const SUMSUB_APP_TOKEN = 'prd:YCuQesaUqRWmdANvRYWy1xj4.zAZkd9ox9M8pW2G4NmEOu3DmgJRHavFW';
+const SUMSUB_SECRET_KEY = '1Gz49K8m7qQqS9oh3e2MWJV47OiWMU6e';
 const SUMSUB_BASE_URL = 'https://api.sumsub.com';
 
 function generateSignature(method, url, timestamp, body) {

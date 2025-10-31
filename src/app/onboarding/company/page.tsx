@@ -28,10 +28,13 @@ export default function CompanyVerification() {
 
   const initializeVerification = async () => {
     try {
+      console.log('[DEBUG] Iniciando verificação de empresa...');
       // Gerar um userId único para a empresa
       const newUserId = `company_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      console.log('[DEBUG] UserId gerado:', newUserId);
       setUserId(newUserId);
 
+      console.log('[DEBUG] Chamando API /api/sumsub/access-token...');
       // Solicitar access token da API
       const response = await fetch('/api/sumsub/access-token', {
         method: 'POST',
@@ -45,15 +48,23 @@ export default function CompanyVerification() {
         }),
       });
 
+      console.log('[DEBUG] Response status:', response.status);
+      console.log('[DEBUG] Response ok:', response.ok);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[DEBUG] Error response:', errorText);
         throw new Error('Falha ao obter token de acesso');
       }
 
       const data = await response.json();
+      console.log('[DEBUG] Token recebido:', data.token ? 'SIM' : 'NÃO');
+      console.log('[DEBUG] Token completo:', data);
       setAccessToken(data.token);
       setIsLoading(false);
     } catch (err) {
-      console.error('Error initializing verification:', err);
+      console.error('[DEBUG] Exception caught:', err);
+      console.error('[DEBUG] Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
       setError('Erro ao inicializar verificação. Por favor, tente novamente.');
       setIsLoading(false);
     }
@@ -61,6 +72,7 @@ export default function CompanyVerification() {
 
   const handleTokenExpiration = async (): Promise<string> => {
     try {
+      console.log('[DEBUG] Renovando token...');
       const response = await fetch('/api/sumsub/access-token', {
         method: 'POST',
         headers: {
@@ -78,21 +90,22 @@ export default function CompanyVerification() {
       }
 
       const data = await response.json();
+      console.log('[DEBUG] Token renovado com sucesso');
       return data.token;
     } catch (err) {
-      console.error('Error refreshing token:', err);
+      console.error('[DEBUG] Error refreshing token:', err);
       throw err;
     }
   };
 
   const handleComplete = (data: any) => {
-    console.log('Verification completed:', data);
+    console.log('[DEBUG] Verification completed:', data);
     // Redirecionar para página de sucesso
     router.push('/onboarding/success?type=company');
   };
 
   const handleError = (error: any) => {
-    console.error('Verification error:', error);
+    console.error('[DEBUG] Verification error:', error);
     setError('Ocorreu um erro durante a verificação. Por favor, tente novamente.');
   };
 
