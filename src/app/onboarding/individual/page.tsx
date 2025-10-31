@@ -369,8 +369,8 @@ export default function IndividualVerification() {
                 <ul className="text-sm text-blue-800 space-y-1">
                   <li>• Documento de identidade com foto (RG, CNH ou RNE)</li>
                   <li>• CPF</li>
-                  <li>• Comprovante de residência recente</li>
-                  <li>• Selfie para verificação facial</li>
+                  <li>• Comprovante de residência (máximo 90 dias)</li>
+                  <li>• Verificação facial ao vivo (liveness)</li>
                 </ul>
               </div>
             </div>

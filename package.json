@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@brazilian-utils/brazilian-utils": "1.0.0-rc.12",
     "@supabase/supabase-js": "^2.78.0",
     "@types/crypto-js": "^4.2.2",
     "crypto-js": "^4.2.0",

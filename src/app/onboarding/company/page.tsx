@@ -367,10 +367,16 @@ export default function CompanyVerification() {
                   Documentos necessários
                 </h4>
                 <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Contrato Social ou Estatuto Social</li>
                   <li>• Cartão CNPJ atualizado</li>
+                  <li>• Contrato Social ou Estatuto Social</li>
                   <li>• Quadro de Sócios e Administradores (QSA)</li>
                   <li>• Comprovante de endereço da empresa</li>
+                  <li>• Declaração de Faturamento dos últimos 12 meses</li>
+                  <li>• Previsão de Faturamento (para empresas novas)</li>
+                  <li>• Balanço Patrimonial</li>
+                  <li>• DRE (Demonstração do Resultado do Exercício)</li>
+                  <li>• Políticas de Compliance PLD/FT</li>
+                  <li>• Últimos 3 Recibos da IN1888</li>
                   <li>• Documentos pessoais dos representantes legais</li>
                   <li>• Procuração (se aplicável)</li>
                 </ul>
