@@ -20,6 +20,7 @@ export interface Applicant {
   review_answer?: 'GREEN' | 'RED' | 'YELLOW';
   document_number?: string;
   full_name?: string;
+  company_name?: string;
   email?: string;
   phone?: string;
   created_at?: string;
@@ -42,6 +43,7 @@ export interface VerificationHistory {
   review_answer?: 'GREEN' | 'RED' | 'YELLOW';
   rejection_reason?: string;
   webhook_payload?: any;
+  metadata?: any;
   created_at?: string;
 }
 
