@@ -21,12 +21,6 @@ export default function CompanyVerification() {
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [debugInfo, setDebugInfo] = useState<string[]>([]);
-
-  const addDebug = (msg: string) => {
-    console.log(msg);
-    setDebugInfo(prev => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
-  };
 
   useEffect(() => {
     initializeVerification();
@@ -34,13 +28,10 @@ export default function CompanyVerification() {
 
   const initializeVerification = async () => {
     try {
-      addDebug('[DEBUG] Iniciando verificação de empresa...');
       // Gerar um userId único para a empresa
       const newUserId = `company_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-      addDebug(`[DEBUG] UserId gerado: ${newUserId}`);
       setUserId(newUserId);
 
-      addDebug('[DEBUG] Chamando API /api/sumsub/access-token...');
       // Solicitar access token da API
       const response = await fetch('/api/sumsub/access-token', {
         method: 'POST',
@@ -54,23 +45,18 @@ export default function CompanyVerification() {
         }),
       });
 
-      addDebug(`[DEBUG] Response status: ${response.status}`);
-      addDebug(`[DEBUG] Response ok: ${response.ok}`);
-
       if (!response.ok) {
-        const errorText = await response.text();
-        addDebug(`[DEBUG] Error response: ${errorText}`);
         throw new Error('Falha ao obter token de acesso');
       }
 
       const data = await response.json();
-      addDebug(`[DEBUG] Token recebido: ${data.token ? 'SIM' : 'NÃO'}`);
-      addDebug(`[DEBUG] Token completo: ${JSON.stringify(data)}`);
-      setAccessToken(data.token);
+
+      if (data.token) {
+        setAccessToken(data.token);
+      }
       setIsLoading(false);
     } catch (err) {
-      addDebug(`[DEBUG] Exception caught: ${err}`);
-      addDebug(`[DEBUG] Error details: ${JSON.stringify(err, Object.getOwnPropertyNames(err))}`);
+      console.error('Verification error:', err);
       setError('Erro ao inicializar verificação. Por favor, tente novamente.');
       setIsLoading(false);
     }
@@ -78,7 +64,6 @@ export default function CompanyVerification() {
 
   const handleTokenExpiration = async (): Promise<string> => {
     try {
-      console.log('[DEBUG] Renovando token...');
       const response = await fetch('/api/sumsub/access-token', {
         method: 'POST',
         headers: {
@@ -96,22 +81,20 @@ export default function CompanyVerification() {
       }
 
       const data = await response.json();
-      addDebug('[DEBUG] Token renovado com sucesso');
       return data.token;
     } catch (err) {
-      addDebug(`[DEBUG] Error refreshing token: ${err}`);
+      console.error('Error refreshing token:', err);
       throw err;
     }
   };
 
   const handleComplete = (data: any) => {
-    addDebug(`[DEBUG] Verification completed: ${JSON.stringify(data)}`);
     // Redirecionar para página de sucesso
     router.push('/onboarding/success?type=company');
   };
 
   const handleError = (error: any) => {
-    addDebug(`[DEBUG] Verification error: ${JSON.stringify(error)}`);
+    console.error('Verification error:', error);
     setError('Ocorreu um erro durante a verificação. Por favor, tente novamente.');
   };
 
@@ -158,18 +141,6 @@ export default function CompanyVerification() {
             </div>
           )}
 
-          {/* Debug Info */}
-          {debugInfo.length > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-              <h4 className="font-semibold text-yellow-900 mb-2">🔍 Debug Info:</h4>
-              <div className="text-xs font-mono text-yellow-800 space-y-1 max-h-60 overflow-y-auto">
-                {debugInfo.map((info, idx) => (
-                  <div key={idx}>{info}</div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
               <svg
@@ -204,7 +175,6 @@ export default function CompanyVerification() {
               expirationHandler={handleTokenExpiration}
               onComplete={handleComplete}
               onError={handleError}
-              onDebug={addDebug}
             />
           )}
         </div>

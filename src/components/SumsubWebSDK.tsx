@@ -7,7 +7,6 @@ interface SumsubWebSDKProps {
   expirationHandler: () => Promise<string>;
   onComplete?: (data: any) => void;
   onError?: (error: any) => void;
-  onDebug?: (msg: string) => void;
 }
 
 declare global {
@@ -21,43 +20,36 @@ export default function SumsubWebSDK({
   expirationHandler,
   onComplete,
   onError,
-  onDebug,
 }: SumsubWebSDKProps) {
-  const debug = (msg: string) => {
-    console.log(msg);
-    if (onDebug) onDebug(msg);
-  };
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    debug('[DEBUG SDK] Componente SumsubWebSDK montado');
-    debug(`[DEBUG SDK] accessToken recebido: ${accessToken ? 'SIM' : 'NÃO'}`);
-    debug(`[DEBUG SDK] accessToken length: ${accessToken?.length}`);
+    // SDK inicializando
     
     let snsWebSdkInstance: any = null;
 
     const loadSumsubSDK = () => {
-      debug('[DEBUG SDK] Iniciando carregamento do SDK...');
+
       // Verificar se o script já foi carregado
       if (window.snsWebSdk) {
-        debug('[DEBUG SDK] SDK já carregado, inicializando...');
+
         initializeSdk();
         return;
       }
 
-      debug('[DEBUG SDK] Carregando script do Sumsub...');
+
       // Carregar script do Sumsub
       const script = document.createElement('script');
       script.src = 'https://static.sumsub.com/idensic/static/sns-websdk-builder.js';
       script.async = true;
       script.onload = () => {
-        debug('[DEBUG SDK] Script carregado com sucesso!');
+
         initializeSdk();
       };
       script.onerror = (err) => {
-        debug(`[DEBUG SDK] Falha ao carregar script: ${err}`);
+        console.error('Falha ao carregar script:', err);
         setError('Falha ao carregar o SDK de verificação');
         setIsLoading(false);
       };
@@ -65,17 +57,15 @@ export default function SumsubWebSDK({
     };
 
     const initializeSdk = () => {
-      debug('[DEBUG SDK] initializeSdk chamado');
-      debug(`[DEBUG SDK] containerRef.current: ${containerRef.current ? 'EXISTE' : 'NULL'}`);
-      debug(`[DEBUG SDK] window.snsWebSdk: ${window.snsWebSdk ? 'EXISTE' : 'NULL'}`);
+
       
       if (!containerRef.current || !window.snsWebSdk) {
-        debug('[DEBUG SDK] Container ou SDK não disponível');
+        console.error('Container ou SDK não disponível');
         return;
       }
 
       try {
-        debug('[DEBUG SDK] Inicializando SDK com token...');
+
         snsWebSdkInstance = window.snsWebSdk
           .init(accessToken, expirationHandler)
           .withConf({
@@ -94,29 +84,26 @@ export default function SumsubWebSDK({
             adaptIframeHeight: true,
           })
           .on('idCheck.onStepCompleted', (payload: any) => {
-            debug(`[DEBUG SDK] Step completed: ${JSON.stringify(payload)}`);
+            console.log('Step completed:', payload);
           })
           .on('idCheck.onError', (error: any) => {
-            debug(`[DEBUG SDK] Sumsub error: ${JSON.stringify(error)}`);
+            console.error('Sumsub error:', error);
             setError('Erro durante a verificação');
             if (onError) onError(error);
           })
           .on('idCheck.applicantStatus', (payload: any) => {
-            debug(`[DEBUG SDK] Applicant status: ${JSON.stringify(payload)}`);
+            console.log('Applicant status:', payload);
           })
           .on('idCheck.onApplicantSubmitted', (payload: any) => {
-            debug(`[DEBUG SDK] Applicant submitted: ${JSON.stringify(payload)}`);
+            console.log('Applicant submitted:', payload);
             if (onComplete) onComplete(payload);
           })
           .build();
 
-        debug('[DEBUG SDK] SDK construído, lançando no container...');
         snsWebSdkInstance.launch(containerRef.current);
-        debug('[DEBUG SDK] SDK lançado com sucesso!');
         setIsLoading(false);
       } catch (err) {
-        debug(`[DEBUG SDK] Error initializing Sumsub SDK: ${err}`);
-        debug(`[DEBUG SDK] Error details: ${JSON.stringify(err, Object.getOwnPropertyNames(err))}`);
+        console.error('Error initializing Sumsub SDK:', err);
         setError('Erro ao inicializar verificação');
         setIsLoading(false);
       }
@@ -126,13 +113,13 @@ export default function SumsubWebSDK({
 
     // Cleanup
     return () => {
-      debug('[DEBUG SDK] Cleanup: desmontando componente');
+
       if (snsWebSdkInstance) {
         try {
           snsWebSdkInstance.destroy();
-          debug('[DEBUG SDK] SDK destruído com sucesso');
+
         } catch (err) {
-          debug(`[DEBUG SDK] Error destroying SDK: ${err}`);
+          console.error('Error destroying SDK:', err);
         }
       }
     };
