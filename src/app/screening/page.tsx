@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { IconMark } from '@/components/icons';
+// Removed IconMark import
 
 export default function ScreeningPage() {
   const [walletAddress, setWalletAddress] = useState('');
@@ -66,7 +66,9 @@ export default function ScreeningPage() {
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center gap-4">
-            <IconMark className="w-10 h-10" />
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white text-2xl font-bold">
+              🔍
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 Wallet Screening
