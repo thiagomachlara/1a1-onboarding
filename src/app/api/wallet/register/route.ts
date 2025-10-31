@@ -8,6 +8,7 @@ import { addVerificationHistory } from '@/lib/supabase-db';
 import { performWalletScreening, formatScreeningResult } from '@/lib/chainalysis';
 import { generateScreeningPDF, generateScreeningPDFFilename } from '@/lib/screening-pdf';
 import { createClient } from '@supabase/supabase-js';
+import { createShortLink, buildShortUrl } from '@/lib/pdf-short-links';
 
 export async function POST(request: NextRequest) {
   try {
@@ -204,8 +205,19 @@ export async function POST(request: NextRequest) {
             .createSignedUrl(uploadData.path, 31536000); // 1 ano em segundos
 
           if (urlData) {
-            pdfUrl = urlData.signedUrl;
-            console.log('[Wallet Registration] URL do PDF gerada:', pdfUrl);
+            // Criar link curto
+            try {
+              const shortId = await createShortLink(
+                urlData.signedUrl,
+                applicant.external_user_id,
+                walletAddress
+              );
+              pdfUrl = buildShortUrl(shortId);
+              console.log('[Wallet Registration] PDF gerado com link curto:', pdfUrl);
+            } catch (shortLinkError) {
+              console.error('[Wallet Registration] Erro ao criar link curto, usando URL completa:', shortLinkError);
+              pdfUrl = urlData.signedUrl;
+            }
 
             // Adicionar URL do PDF ao histórico
             await addVerificationHistory({

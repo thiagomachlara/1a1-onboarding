@@ -8,6 +8,7 @@ import { performWalletScreening } from '@/lib/chainalysis';
 import { generateScreeningPDF, generateScreeningPDFFilename } from '@/lib/screening-pdf';
 import { sendWhatsAppNotification, createWalletScreeningNotification } from '@/lib/whatsapp-notifier';
 import { createClient } from '@supabase/supabase-js';
+import { createShortLink, buildShortUrl } from '@/lib/pdf-short-links';
 import { addVerificationHistory } from '@/lib/supabase-db';
 
 export async function GET(request: NextRequest) {
@@ -92,8 +93,19 @@ export async function GET(request: NextRequest) {
           .createSignedUrl(filePath, 31536000); // 1 ano
 
         if (!signedUrlError && signedUrlData) {
-          pdfUrl = signedUrlData.signedUrl;
-          console.log(`[Manual Screening] PDF gerado: ${filename}`);
+          // Criar link curto
+          try {
+            const shortId = await createShortLink(
+              signedUrlData.signedUrl,
+              applicant.external_user_id,
+              walletAddress
+            );
+            pdfUrl = buildShortUrl(shortId);
+            console.log(`[Manual Screening] PDF gerado com link curto: ${pdfUrl}`);
+          } catch (shortLinkError) {
+            console.error('[Manual Screening] Erro ao criar link curto, usando URL completa:', shortLinkError);
+            pdfUrl = signedUrlData.signedUrl;
+          }
         }
       }
     } catch (pdfError) {
