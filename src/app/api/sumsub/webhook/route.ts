@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import {
+  sendWhatsAppNotification,
+  createApplicantCreatedNotification,
+  createApplicantPendingNotification,
+  createApplicantReviewedNotification,
+  createApplicantOnHoldNotification,
+} from '@/lib/whatsapp-notifier';
 
 const SUMSUB_SECRET_KEY = process.env.SUMSUB_SECRET_KEY!;
 
@@ -16,6 +23,19 @@ function verifyWebhookSignature(
     .digest('hex');
   
   return signature === expectedSignature;
+}
+
+/**
+ * Extrai tipo de verificação do externalUserId
+ */
+function extractVerificationType(externalUserId: string): 'individual' | 'company' {
+  if (externalUserId.startsWith('individual_')) {
+    return 'individual';
+  }
+  if (externalUserId.startsWith('company_')) {
+    return 'company';
+  }
+  return 'individual'; // fallback
 }
 
 /**
@@ -93,6 +113,16 @@ export async function POST(request: NextRequest) {
 async function handleApplicantCreated(data: any) {
   console.log('Applicant created:', data.externalUserId);
   
+  const verificationType = extractVerificationType(data.externalUserId);
+
+  // Enviar notificação para WhatsApp
+  const notification = createApplicantCreatedNotification({
+    externalUserId: data.externalUserId,
+    verificationType,
+  });
+
+  await sendWhatsAppNotification(notification);
+
   // TODO: Salvar no Supabase
   // - Criar registro na tabela de verificações
   // - Status: 'created'
@@ -105,6 +135,27 @@ async function handleApplicantCreated(data: any) {
 async function handleApplicantPending(data: any) {
   console.log('Applicant pending:', data.externalUserId);
   
+  const verificationType = extractVerificationType(data.externalUserId);
+
+  // Extrair informações do applicant (se disponível)
+  const applicantInfo = data.applicantInfo || {};
+  const name = applicantInfo.firstName 
+    ? `${applicantInfo.firstName} ${applicantInfo.lastName || ''}`.trim()
+    : undefined;
+  const email = applicantInfo.email;
+  const document = applicantInfo.idDocs?.[0]?.number;
+
+  // Enviar notificação para WhatsApp
+  const notification = createApplicantPendingNotification({
+    externalUserId: data.externalUserId,
+    verificationType,
+    name,
+    email,
+    document,
+  });
+
+  await sendWhatsAppNotification(notification);
+
   // TODO: Atualizar no Supabase
   // - Status: 'pending'
   // - Timestamp de submissão
@@ -121,6 +172,29 @@ async function handleApplicantReviewed(data: any) {
     result: reviewResult?.reviewAnswer,
     status: reviewStatus,
   });
+
+  const verificationType = extractVerificationType(externalUserId);
+
+  // Extrair informações do applicant
+  const applicantInfo = data.applicantInfo || {};
+  const name = applicantInfo.firstName 
+    ? `${applicantInfo.firstName} ${applicantInfo.lastName || ''}`.trim()
+    : undefined;
+  const email = applicantInfo.email;
+  const document = applicantInfo.idDocs?.[0]?.number;
+
+  // Enviar notificação para WhatsApp
+  const notification = createApplicantReviewedNotification({
+    externalUserId,
+    verificationType,
+    name,
+    email,
+    document,
+    reviewAnswer: reviewResult?.reviewAnswer || 'YELLOW',
+    reviewStatus,
+  });
+
+  await sendWhatsAppNotification(notification);
 
   // TODO: Atualizar no Supabase
   // - Status: reviewResult.reviewAnswer (GREEN, RED, etc.)
@@ -140,6 +214,27 @@ async function handleApplicantReviewed(data: any) {
 async function handleApplicantOnHold(data: any) {
   console.log('Applicant on hold:', data.externalUserId);
   
+  const verificationType = extractVerificationType(data.externalUserId);
+
+  // Extrair informações do applicant
+  const applicantInfo = data.applicantInfo || {};
+  const name = applicantInfo.firstName 
+    ? `${applicantInfo.firstName} ${applicantInfo.lastName || ''}`.trim()
+    : undefined;
+  const email = applicantInfo.email;
+  const document = applicantInfo.idDocs?.[0]?.number;
+
+  // Enviar notificação para WhatsApp
+  const notification = createApplicantOnHoldNotification({
+    externalUserId: data.externalUserId,
+    verificationType,
+    name,
+    email,
+    document,
+  });
+
+  await sendWhatsAppNotification(notification);
+
   // TODO: Atualizar no Supabase
   // - Status: 'on_hold'
   // - Timestamp
