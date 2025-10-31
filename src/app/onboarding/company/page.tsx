@@ -40,7 +40,7 @@ export default function CompanyVerification() {
         },
         body: JSON.stringify({
           userId: newUserId,
-          levelName: 'full-kyb', // Level configurado no Sumsub para empresas
+          levelName: 'auto-kyb', // Level configurado no Sumsub para empresas
           ttlInSecs: 600, // Token válido por 10 minutos
         }),
       });
@@ -68,7 +68,7 @@ export default function CompanyVerification() {
         },
         body: JSON.stringify({
           userId: userId,
-          levelName: 'full-kyb',
+          levelName: 'auto-kyb',
           ttlInSecs: 600,
         }),
       });
