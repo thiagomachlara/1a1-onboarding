@@ -204,6 +204,7 @@ export default function CompanyVerification() {
               expirationHandler={handleTokenExpiration}
               onComplete={handleComplete}
               onError={handleError}
+              onDebug={addDebug}
             />
           )}
         </div>

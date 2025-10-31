@@ -7,6 +7,7 @@ interface SumsubWebSDKProps {
   expirationHandler: () => Promise<string>;
   onComplete?: (data: any) => void;
   onError?: (error: any) => void;
+  onDebug?: (msg: string) => void;
 }
 
 declare global {
@@ -20,38 +21,43 @@ export default function SumsubWebSDK({
   expirationHandler,
   onComplete,
   onError,
+  onDebug,
 }: SumsubWebSDKProps) {
+  const debug = (msg: string) => {
+    console.log(msg);
+    if (onDebug) onDebug(msg);
+  };
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('[DEBUG SDK] Componente SumsubWebSDK montado');
-    console.log('[DEBUG SDK] accessToken recebido:', accessToken ? 'SIM' : 'NÃO');
-    console.log('[DEBUG SDK] accessToken length:', accessToken?.length);
+    debug('[DEBUG SDK] Componente SumsubWebSDK montado');
+    debug(`[DEBUG SDK] accessToken recebido: ${accessToken ? 'SIM' : 'NÃO'}`);
+    debug(`[DEBUG SDK] accessToken length: ${accessToken?.length}`);
     
     let snsWebSdkInstance: any = null;
 
     const loadSumsubSDK = () => {
-      console.log('[DEBUG SDK] Iniciando carregamento do SDK...');
+      debug('[DEBUG SDK] Iniciando carregamento do SDK...');
       // Verificar se o script já foi carregado
       if (window.snsWebSdk) {
-        console.log('[DEBUG SDK] SDK já carregado, inicializando...');
+        debug('[DEBUG SDK] SDK já carregado, inicializando...');
         initializeSdk();
         return;
       }
 
-      console.log('[DEBUG SDK] Carregando script do Sumsub...');
+      debug('[DEBUG SDK] Carregando script do Sumsub...');
       // Carregar script do Sumsub
       const script = document.createElement('script');
       script.src = 'https://static.sumsub.com/idensic/static/sns-websdk-builder.js';
       script.async = true;
       script.onload = () => {
-        console.log('[DEBUG SDK] Script carregado com sucesso!');
+        debug('[DEBUG SDK] Script carregado com sucesso!');
         initializeSdk();
       };
       script.onerror = (err) => {
-        console.error('[DEBUG SDK] Falha ao carregar script:', err);
+        debug(`[DEBUG SDK] Falha ao carregar script: ${err}`);
         setError('Falha ao carregar o SDK de verificação');
         setIsLoading(false);
       };
@@ -59,17 +65,17 @@ export default function SumsubWebSDK({
     };
 
     const initializeSdk = () => {
-      console.log('[DEBUG SDK] initializeSdk chamado');
-      console.log('[DEBUG SDK] containerRef.current:', containerRef.current ? 'EXISTE' : 'NULL');
-      console.log('[DEBUG SDK] window.snsWebSdk:', window.snsWebSdk ? 'EXISTE' : 'NULL');
+      debug('[DEBUG SDK] initializeSdk chamado');
+      debug(`[DEBUG SDK] containerRef.current: ${containerRef.current ? 'EXISTE' : 'NULL'}`);
+      debug(`[DEBUG SDK] window.snsWebSdk: ${window.snsWebSdk ? 'EXISTE' : 'NULL'}`);
       
       if (!containerRef.current || !window.snsWebSdk) {
-        console.error('[DEBUG SDK] Container ou SDK não disponível');
+        debug('[DEBUG SDK] Container ou SDK não disponível');
         return;
       }
 
       try {
-        console.log('[DEBUG SDK] Inicializando SDK com token...');
+        debug('[DEBUG SDK] Inicializando SDK com token...');
         snsWebSdkInstance = window.snsWebSdk
           .init(accessToken, expirationHandler)
           .withConf({
@@ -100,29 +106,29 @@ export default function SumsubWebSDK({
             }
           `)
           .on('idCheck.onStepCompleted', (payload: any) => {
-            console.log('[DEBUG SDK] Step completed:', payload);
+            debug(`[DEBUG SDK] Step completed: ${JSON.stringify(payload)}`);
           })
           .on('idCheck.onError', (error: any) => {
-            console.error('[DEBUG SDK] Sumsub error:', error);
+            debug(`[DEBUG SDK] Sumsub error: ${JSON.stringify(error)}`);
             setError('Erro durante a verificação');
             if (onError) onError(error);
           })
           .on('idCheck.applicantStatus', (payload: any) => {
-            console.log('[DEBUG SDK] Applicant status:', payload);
+            debug(`[DEBUG SDK] Applicant status: ${JSON.stringify(payload)}`);
           })
           .on('idCheck.onApplicantSubmitted', (payload: any) => {
-            console.log('[DEBUG SDK] Applicant submitted:', payload);
+            debug(`[DEBUG SDK] Applicant submitted: ${JSON.stringify(payload)}`);
             if (onComplete) onComplete(payload);
           })
           .build();
 
-        console.log('[DEBUG SDK] SDK construído, lançando no container...');
+        debug('[DEBUG SDK] SDK construído, lançando no container...');
         snsWebSdkInstance.launch(containerRef.current);
-        console.log('[DEBUG SDK] SDK lançado com sucesso!');
+        debug('[DEBUG SDK] SDK lançado com sucesso!');
         setIsLoading(false);
       } catch (err) {
-        console.error('[DEBUG SDK] Error initializing Sumsub SDK:', err);
-        console.error('[DEBUG SDK] Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
+        debug(`[DEBUG SDK] Error initializing Sumsub SDK: ${err}`);
+        debug(`[DEBUG SDK] Error details: ${JSON.stringify(err, Object.getOwnPropertyNames(err))}`);
         setError('Erro ao inicializar verificação');
         setIsLoading(false);
       }
@@ -132,17 +138,17 @@ export default function SumsubWebSDK({
 
     // Cleanup
     return () => {
-      console.log('[DEBUG SDK] Cleanup: desmontando componente');
+      debug('[DEBUG SDK] Cleanup: desmontando componente');
       if (snsWebSdkInstance) {
         try {
           snsWebSdkInstance.destroy();
-          console.log('[DEBUG SDK] SDK destruído com sucesso');
+          debug('[DEBUG SDK] SDK destruído com sucesso');
         } catch (err) {
-          console.error('[DEBUG SDK] Error destroying SDK:', err);
+          debug(`[DEBUG SDK] Error destroying SDK: ${err}`);
         }
       }
     };
-  }, [accessToken, expirationHandler, onComplete, onError]);
+  }, [accessToken, expirationHandler, onComplete, onError, onDebug]);
 
   if (error) {
     return (
