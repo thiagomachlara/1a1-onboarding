@@ -72,9 +72,8 @@ export async function GET(request: NextRequest) {
       
       try {
         const pdfBuffer = await generateScreeningPDF(
-          testClient,
-          walletAddress,
-          screeningResult
+          screeningResult,
+          testClient
         );
         
         results.pdf = {
