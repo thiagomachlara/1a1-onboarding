@@ -93,18 +93,6 @@ export default function SumsubWebSDK({
             addViewportTag: false,
             adaptIframeHeight: true,
           })
-          .withCustomCss(`
-            .sumsub-widget {
-              width: 100% !important;
-              max-width: 900px !important;
-              margin: 0 auto !important;
-            }
-            @media (max-width: 768px) {
-              .sumsub-widget {
-                max-width: 100% !important;
-              }
-            }
-          `)
           .on('idCheck.onStepCompleted', (payload: any) => {
             debug(`[DEBUG SDK] Step completed: ${JSON.stringify(payload)}`);
           })
@@ -148,7 +136,7 @@ export default function SumsubWebSDK({
         }
       }
     };
-  }, [accessToken, expirationHandler, onComplete, onError, onDebug]);
+  }, [accessToken]); // Apenas accessToken como dependência para evitar loop
 
   if (error) {
     return (
