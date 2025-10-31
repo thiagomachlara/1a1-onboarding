@@ -15,6 +15,7 @@ import {
   type Applicant,
 } from '@/lib/supabase-db';
 import { consultarCNPJ, formatarEndereco, formatarTelefone } from '@/lib/brasilapi';
+import { getApplicantData } from '@/lib/sumsub-api';
 import {
   generateContractToken,
   generateContractLink,
@@ -84,6 +85,48 @@ function extractName(data: any, verificationType: 'individual' | 'company'): str
     const lastName = data.info?.lastName || data.lastName || '';
     const fullName = `${firstName} ${lastName}`.trim();
     return fullName || undefined;
+  }
+}
+
+/**
+ * Enriquece dados do webhook com informações completas da API Sumsub
+ */
+async function enrichWithSumsubData(
+  applicantId: string,
+  verificationType: 'individual' | 'company',
+  webhookData: any
+) {
+  try {
+    const sumsubData = await getApplicantData(applicantId);
+    console.log('✅ Dados completos obtidos da API Sumsub');
+    
+    return {
+      name: verificationType === 'company' ? sumsubData.companyName : sumsubData.fullName,
+      email: sumsubData.email,
+      phone: sumsubData.phone,
+      document: verificationType === 'company' ? sumsubData.registrationNumber : sumsubData.idDocNumber,
+      sumsubData,
+    };
+  } catch (error) {
+    console.error('❌ Erro ao buscar dados do Sumsub, usando fallback:', error);
+    
+    // Fallback para dados do webhook (incompletos)
+    const name = extractName(webhookData, verificationType);
+    const email = webhookData.info?.email || webhookData.email;
+    const phone = webhookData.info?.phone || webhookData.phone;
+    
+    let document: string | undefined;
+    if (verificationType === 'company') {
+      document = webhookData.info?.companyInfo?.registrationNumber ||
+                 webhookData.companyInfo?.registrationNumber ||
+                 extractDocumentFromExternalUserId(webhookData.externalUserId);
+    } else {
+      document = webhookData.info?.idDocs?.[0]?.number || 
+                 webhookData.idDocs?.[0]?.number ||
+                 extractDocumentFromExternalUserId(webhookData.externalUserId);
+    }
+    
+    return { name, email, phone, document, sumsubData: null };
   }
 }
 
@@ -236,24 +279,9 @@ async function handleApplicantPending(data: any) {
   
   const verificationType = extractVerificationType(data);
 
-  // Extrair informações do applicant (usando nova função)
-  const name = extractName(data, verificationType);
-  const email = data.info?.email || data.email;
-  const phone = data.info?.phone || data.phone;
-  
-  // Extrair documento (diferente para PF e PJ)
-  let document: string | undefined;
-  if (verificationType === 'company') {
-    // Para PJ: buscar CNPJ no companyInfo ou no externalUserId
-    document = data.info?.companyInfo?.registrationNumber ||
-               data.companyInfo?.registrationNumber ||
-               extractDocumentFromExternalUserId(data.externalUserId);
-  } else {
-    // Para PF: buscar CPF no idDocs ou no externalUserId
-    document = data.info?.idDocs?.[0]?.number || 
-               data.idDocs?.[0]?.number ||
-               extractDocumentFromExternalUserId(data.externalUserId);
-  }
+  // 🆕 Buscar dados completos na API Sumsub
+  const enrichedData = await enrichWithSumsubData(data.applicantId, verificationType, data);
+  const { name, email, phone, document } = enrichedData;
 
   // Atualizar no Supabase
   try {
@@ -317,16 +345,14 @@ async function handleApplicantReviewed(data: any) {
 
   const verificationType = extractVerificationType(data);
 
-  // Extrair informações do applicant (usando nova função)
-  let name = extractName(data, verificationType);
-  let email = data.info?.email || data.email;
-  let phone = data.info?.phone || data.phone;
-  let document = data.info?.idDocs?.[0]?.number || data.idDocs?.[0]?.number;
+  // 🆕 Buscar dados completos na API Sumsub
+  const enrichedData = await enrichWithSumsubData(data.applicantId, verificationType, data);
+  let { name, email, phone, document } = enrichedData;
   
-  // Buscar dados do banco se não vieram no payload
+  // Buscar dados do banco como fallback adicional
   const existingApplicant = await getApplicantByExternalUserId(externalUserId);
   if (existingApplicant) {
-    name = name || existingApplicant.full_name;
+    name = name || existingApplicant.full_name || existingApplicant.company_name;
     email = email || existingApplicant.email;
     phone = phone || existingApplicant.phone;
     document = document || existingApplicant.document_number;
