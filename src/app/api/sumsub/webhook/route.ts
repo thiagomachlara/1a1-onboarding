@@ -497,6 +497,7 @@ async function handleApplicantReviewed(data: any) {
     document,
     reviewAnswer: reviewAnswer as 'GREEN' | 'RED' | 'YELLOW',
     reviewStatus,
+    rejectionReason, // Adicionar motivos de rejeição
     contractLink, // Adicionar magic link se aprovado
     sumsubReportUrl, // Adicionar link do Summary Report
   });

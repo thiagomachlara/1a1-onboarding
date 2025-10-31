@@ -18,6 +18,7 @@ export interface OnboardingNotification {
   };
   status: 'created' | 'pending' | 'approved' | 'rejected' | 'on_hold' | 'under_review';
   reviewAnswer?: 'GREEN' | 'RED' | 'YELLOW';
+  rejectionReason?: string; // Motivos de rejeição (rejectLabels)
   message: string;
   contractLink?: string; // Magic link para assinatura de contrato
   sumsubReportUrl?: string; // Link para Summary Report PDF do Sumsub
@@ -122,7 +123,40 @@ function formatWhatsAppMessage(notification: OnboardingNotification): string {
       message += `\n\nCopie e envie o link acima para o cliente assinar o contrato.`;
     }
   } else if (status === 'rejected') {
-    message += `\n❌ O onboarding foi rejeitado. Verifique os motivos no dashboard.`;
+    message += `\n❌ O onboarding foi rejeitado.`;
+    
+    // Adicionar motivos de rejeição se disponíveis
+    if (notification.rejectionReason) {
+      message += `\n\n📝 *Motivos da rejeição:*`;
+      
+      // Traduzir e formatar reject labels
+      const reasons = notification.rejectionReason.split(', ').map(reason => {
+        const translations: Record<string, string> = {
+          'DOCUMENT_TEMPLATE': '📄 Documento não corresponde ao template esperado',
+          'COMPROMISED_PERSONS': '⚠️ Pessoa comprometida (PEP, sanções, etc)',
+          'FRAUDULENT_PATTERNS': '🚫 Padrões fraudulentos detectados',
+          'SPAM': '🚫 Spam ou tentativa de fraude',
+          'GRAPHIC_EDITOR': '✏️ Documento editado digitalmente',
+          'FOREIGNER': '🌍 Estrangeiro (fora da jurisdição aceita)',
+          'BLACKLIST': '⛔ Presente em lista negra',
+          'SELFIE_MISMATCH': '🤳 Selfie não corresponde ao documento',
+          'ID_INVALID': '🆔 Documento inválido ou expirado',
+          'PROBLEMATIC_APPLICANT_DATA': '⚠️ Dados do aplicante problemáticos',
+          'ADDITIONAL_DOCUMENT_REQUIRED': '📄 Documento adicional necessário',
+          'AGE_REQUIREMENT_MISMATCH': '📅 Idade não atende aos requisitos',
+          'EXPERIENCE_REQUIRED': '💼 Experiência necessária não comprovada',
+          'DOCUMENT_PAGE_MISSING': '📄 Página do documento faltando',
+          'DOCUMENT_DAMAGED': '💥 Documento danificado ou ilegível',
+          'REGULATIONS_VIOLATIONS': '⚠️ Violações regulatórias',
+          'INCONSISTENT_PROFILE': '🔄 Perfil inconsistente',
+          'PROOF_OF_ADDRESS_INVALID': '🏠 Comprovante de endereço inválido',
+        };
+        
+        return translations[reason] || `• ${reason}`;
+      });
+      
+      message += `\n${reasons.join('\n')}`;
+    }
     
     // Adicionar link do Summary Report mesmo se rejeitado
     if (notification.sumsubReportUrl) {
@@ -343,6 +377,7 @@ export function createApplicantReviewedNotification(data: {
   document?: string;
   reviewAnswer: 'GREEN' | 'RED' | 'YELLOW';
   reviewStatus?: string;
+  rejectionReason?: string;
   contractLink?: string;
   sumsubReportUrl?: string;
 }): OnboardingNotification {
@@ -368,6 +403,7 @@ export function createApplicantReviewedNotification(data: {
     },
     status,
     reviewAnswer: data.reviewAnswer,
+    rejectionReason: data.rejectionReason,
     contractLink: data.contractLink,
     sumsubReportUrl: data.sumsubReportUrl,
     message: `Onboarding ${status === 'approved' ? 'aprovado' : status === 'rejected' ? 'rejeitado' : 'em revisão'}`,
