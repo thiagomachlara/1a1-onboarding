@@ -10,6 +10,12 @@ import {
   createContractSignedNotification,
 } from '@/lib/whatsapp-notifier';
 import { addVerificationHistory } from '@/lib/supabase-db';
+import { generateContractPDF } from '@/lib/contract-pdf';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,7 +48,37 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
     // Marcar contrato como assinado
+    const signedAt = new Date().toISOString();
     await signContract(applicant.id, ip, userAgent);
+
+    // Gerar PDF do contrato
+    const pdfData = generateContractPDF({
+      applicant,
+      signedAt,
+      ip,
+      userAgent,
+    });
+
+    // Salvar PDF no Supabase Storage
+    const fileName = `contract_${applicant.external_user_id}_${Date.now()}.pdf`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('contracts')
+      .upload(fileName, pdfData, {
+        contentType: 'application/pdf',
+        cacheControl: '3600',
+      });
+
+    if (uploadError) {
+      console.error('Error uploading PDF:', uploadError);
+    } else {
+      console.log('✅ PDF saved:', fileName);
+      
+      // Atualizar applicant com caminho do PDF
+      await supabase
+        .from('applicants')
+        .update({ contract_pdf_path: fileName })
+        .eq('id', applicant.id);
+    }
 
     // Adicionar ao histórico
     await addVerificationHistory({
