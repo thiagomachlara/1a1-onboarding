@@ -40,9 +40,7 @@ export async function GET(
     }
 
     // Incrementar contador de acessos (fire and forget)
-    supabase.rpc('increment_pdf_access', { link_id: id })
-      .then(() => console.log(`[Sumsub Link] Acesso incrementado para ${id}`))
-      .catch((err: unknown) => console.error('[Sumsub Link] Erro ao incrementar acesso:', err));
+    void supabase.rpc('increment_pdf_access', { link_id: id });
 
     // Redirecionar para URL completa
     return NextResponse.redirect(data.full_url, 302);
