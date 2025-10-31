@@ -6,6 +6,8 @@ import {
 } from '@/lib/whatsapp-notifier';
 import { addVerificationHistory } from '@/lib/supabase-db';
 import { performWalletScreening, formatScreeningResult } from '@/lib/chainalysis';
+import { generateScreeningPDF, generateScreeningPDFFilename } from '@/lib/screening-pdf';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
@@ -163,6 +165,67 @@ export async function POST(request: NextRequest) {
     });
 
     // ========================================================================
+    // GERAR PDF DO SCREENING
+    // ========================================================================
+
+    let pdfUrl: string | null = null;
+
+    if (screeningResult) {
+      try {
+        console.log('[Wallet Registration] Gerando PDF do screening...');
+
+        // Gerar PDF
+        const pdfBuffer = await generateScreeningPDF(screeningResult, applicant);
+        const pdfFilename = generateScreeningPDFFilename(applicant.external_user_id, walletAddress);
+
+        // Inicializar cliente Supabase com service_role key
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        // Upload do PDF para o Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('screening-reports')
+          .upload(pdfFilename, pdfBuffer, {
+            contentType: 'application/pdf',
+            upsert: false,
+          });
+
+        if (uploadError) {
+          console.error('[Wallet Registration] Erro ao fazer upload do PDF:', uploadError);
+        } else {
+          console.log('[Wallet Registration] PDF salvo com sucesso:', uploadData.path);
+
+          // Gerar URL pública (signed URL válida por 1 ano)
+          const { data: urlData } = await supabase.storage
+            .from('screening-reports')
+            .createSignedUrl(uploadData.path, 31536000); // 1 ano em segundos
+
+          if (urlData) {
+            pdfUrl = urlData.signedUrl;
+            console.log('[Wallet Registration] URL do PDF gerada:', pdfUrl);
+
+            // Adicionar URL do PDF ao histórico
+            await addVerificationHistory({
+              applicant_id: applicant.id,
+              event_type: 'screening_pdf_generated',
+              new_status: applicant.current_status,
+              metadata: {
+                walletAddress,
+                pdfFilename,
+                pdfUrl,
+                timestamp: new Date().toISOString(),
+              },
+            });
+          }
+        }
+      } catch (pdfError) {
+        console.error('[Wallet Registration] Erro ao gerar PDF:', pdfError);
+        // Não bloquear o cadastro se houver erro no PDF
+      }
+    }
+
+    // ========================================================================
     // NOTIFICAÇÃO WHATSAPP
     // ========================================================================
 
@@ -184,6 +247,7 @@ export async function POST(request: NextRequest) {
           riskLevel: screeningResult.riskLevel,
           isSanctioned: screeningResult.isSanctioned,
           decisionReason: screeningResult.decisionReason,
+          pdfUrl: pdfUrl || undefined,
         },
       };
     }

@@ -143,11 +143,49 @@ function formatWhatsAppMessage(notification: OnboardingNotification): string {
       message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
       message += `\n\n*Endereço TRC-20:*`;
       message += `\n\`${notification.walletAddress}\``;
+      
+      // Adicionar informações do screening Chainalysis se disponível
+      if (notification.metadata?.chainalysisScreening) {
+        const screening = notification.metadata.chainalysisScreening;
+        message += `\n\n🔍 *Screening Chainalysis:*`;
+        
+        // Decisão
+        let decisionEmoji = '✅';
+        let decisionText = 'APROVADA';
+        if (screening.decision === 'REJECTED') {
+          decisionEmoji = '❌';
+          decisionText = 'REJEITADA';
+        } else if (screening.decision === 'MANUAL_REVIEW') {
+          decisionEmoji = '⚠️';
+          decisionText = 'REVISÃO MANUAL';
+        }
+        message += `\n• Decisão: ${decisionEmoji} ${decisionText}`;
+        
+        // Nível de risco
+        if (screening.riskLevel) {
+          let riskEmoji = '🟢';
+          if (screening.riskLevel === 'Medium') riskEmoji = '🟡';
+          if (screening.riskLevel === 'High' || screening.riskLevel === 'Severe') riskEmoji = '🔴';
+          message += `\n• Risco: ${riskEmoji} ${screening.riskLevel}`;
+        }
+        
+        // Sancionada
+        if (screening.isSanctioned) {
+          message += `\n• ⚠️ WALLET SANCIONADA`;
+        }
+        
+        // Link do PDF
+        if (screening.pdfUrl) {
+          message += `\n\n📄 *Relatório completo:*`;
+          message += `\n${screening.pdfUrl}`;
+        }
+      }
+      
       message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
       message += `\n🔍 *AÇÃO NECESSÁRIA*`;
       message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n\n1. Realizar KYT via Chainalysis`;
-      message += `\n2. Verificar score de risco`;
+      message += `\n\n1. Revisar relatório de screening`;
+      message += `\n2. Verificar exposições de risco`;
       message += `\n3. Aprovar ou rejeitar wallet`;
     }
   }
