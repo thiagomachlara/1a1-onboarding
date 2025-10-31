@@ -5,6 +5,7 @@ import {
   createWalletRegisteredNotification,
 } from '@/lib/whatsapp-notifier';
 import { addVerificationHistory } from '@/lib/supabase-db';
+import { performWalletScreening, formatScreeningResult } from '@/lib/chainalysis';
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +40,112 @@ export async function POST(request: NextRequest) {
 
     const applicant = result.applicant;
 
+    // ========================================================================
+    // CHAINALYSIS SCREENING
+    // ========================================================================
+    
+    console.log(`[Wallet Registration] Iniciando screening Chainalysis para ${walletAddress}`);
+    
+    let screeningResult;
+    try {
+      // Realizar screening completo (sanções + risco)
+      screeningResult = await performWalletScreening(
+        walletAddress,
+        `applicant_${applicant.id}`
+      );
+
+      console.log('[Wallet Registration] Resultado do screening:');
+      console.log(formatScreeningResult(screeningResult));
+
+      // Adicionar resultado ao histórico
+      await addVerificationHistory({
+        applicant_id: applicant.id,
+        event_type: 'wallet_screening',
+        new_status: applicant.current_status,
+        metadata: {
+          walletAddress,
+          screening: screeningResult,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      // Verificar decisão do screening
+      if (screeningResult.decision === 'REJECTED') {
+        console.log(`[Wallet Registration] Wallet REJEITADA: ${screeningResult.decisionReason}`);
+        
+        // Adicionar rejeição ao histórico
+        await addVerificationHistory({
+          applicant_id: applicant.id,
+          event_type: 'wallet_rejected',
+          new_status: applicant.current_status,
+          metadata: {
+            walletAddress,
+            reason: screeningResult.decisionReason,
+            isSanctioned: screeningResult.isSanctioned,
+            riskLevel: screeningResult.riskLevel,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Wallet rejeitada',
+            reason: screeningResult.decisionReason,
+            details: {
+              isSanctioned: screeningResult.isSanctioned,
+              riskLevel: screeningResult.riskLevel,
+            },
+          },
+          { status: 403 }
+        );
+      }
+
+      if (screeningResult.decision === 'MANUAL_REVIEW') {
+        console.log(`[Wallet Registration] Wallet requer REVISÃO MANUAL: ${screeningResult.decisionReason}`);
+        
+        // Adicionar ao histórico para revisão manual
+        await addVerificationHistory({
+          applicant_id: applicant.id,
+          event_type: 'wallet_manual_review',
+          new_status: applicant.current_status,
+          metadata: {
+            walletAddress,
+            reason: screeningResult.decisionReason,
+            riskLevel: screeningResult.riskLevel,
+            exposures: screeningResult.exposures,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        // Por enquanto, permitir o cadastro mas marcar para revisão
+        // TODO: Implementar fluxo de revisão manual
+        console.log('[Wallet Registration] Permitindo cadastro com flag de revisão manual');
+      }
+
+    } catch (screeningError) {
+      console.error('[Wallet Registration] Erro no screening Chainalysis:', screeningError);
+      
+      // Adicionar erro ao histórico
+      await addVerificationHistory({
+        applicant_id: applicant.id,
+        event_type: 'wallet_screening_error',
+        new_status: applicant.current_status,
+        metadata: {
+          walletAddress,
+          error: screeningError instanceof Error ? screeningError.message : 'Erro desconhecido',
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      // Em caso de erro no screening, permitir o cadastro mas marcar para revisão
+      console.log('[Wallet Registration] Erro no screening - permitindo cadastro com flag de revisão');
+    }
+
+    // ========================================================================
+    // SALVAR WALLET
+    // ========================================================================
+
     // Salvar wallet
     await saveWallet(applicant.id, walletAddress);
 
@@ -49,12 +156,18 @@ export async function POST(request: NextRequest) {
       new_status: applicant.current_status,
       metadata: {
         walletAddress,
+        screeningDecision: screeningResult?.decision,
+        riskLevel: screeningResult?.riskLevel,
         timestamp: new Date().toISOString(),
       },
     });
 
-    // Enviar notificação WhatsApp
-    const notification = createWalletRegisteredNotification({
+    // ========================================================================
+    // NOTIFICAÇÃO WHATSAPP
+    // ========================================================================
+
+    // Criar mensagem de notificação incluindo resultado do screening
+    let notificationMessage = createWalletRegisteredNotification({
       externalUserId: applicant.external_user_id,
       verificationType: applicant.applicant_type,
       name: applicant.company_name || applicant.full_name,
@@ -62,13 +175,36 @@ export async function POST(request: NextRequest) {
       walletAddress,
     });
 
-    await sendWhatsAppNotification(notification);
+    // Adicionar informações do screening à notificação
+    if (screeningResult) {
+      notificationMessage += `\n\n🔍 *Screening Chainalysis:*`;
+      notificationMessage += `\n• Decisão: ${screeningResult.decision === 'APPROVED' ? '✅ APROVADA' : screeningResult.decision === 'MANUAL_REVIEW' ? '⚠️ REVISÃO MANUAL' : '❌ REJEITADA'}`;
+      
+      if (screeningResult.riskLevel) {
+        notificationMessage += `\n• Nível de risco: ${screeningResult.riskLevel}`;
+      }
+      
+      if (screeningResult.isSanctioned) {
+        notificationMessage += `\n• ⚠️ WALLET SANCIONADA`;
+      }
+      
+      if (screeningResult.decision === 'MANUAL_REVIEW') {
+        notificationMessage += `\n• Razão: ${screeningResult.decisionReason}`;
+      }
+    }
+
+    await sendWhatsAppNotification(notificationMessage);
 
     console.log('✅ Wallet registered successfully:', applicant.id, walletAddress);
 
     return NextResponse.json({
       success: true,
       message: 'Wallet cadastrada com sucesso',
+      screening: screeningResult ? {
+        decision: screeningResult.decision,
+        riskLevel: screeningResult.riskLevel,
+        requiresManualReview: screeningResult.decision === 'MANUAL_REVIEW',
+      } : null,
     });
   } catch (error) {
     console.error('Error registering wallet:', error);
