@@ -80,7 +80,11 @@ function formatWhatsAppMessage(notification: OnboardingNotification): string {
   }
   
   message += `*ID:* ${applicant.id}\n`;
-  message += `*Data:* ${new Date(notification.timestamp).toLocaleString('pt-BR')}\n`;
+  message += `*Data:* ${new Date(notification.timestamp).toLocaleString('pt-BR', { 
+    timeZone: 'America/Sao_Paulo',
+    dateStyle: 'short',
+    timeStyle: 'medium'
+  })}\n`;
   
   // Status detalhado
   message += `\n*Status:* ${emoji} ${getStatusLabel(status)}\n`;
