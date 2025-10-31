@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
  * Endpoint para redirecionar links curtos de PDFs do Sumsub
@@ -23,7 +27,6 @@ export async function GET(
     }
 
     // Buscar URL completa no banco de dados
-    const supabase = await createClient();
     
     const { data, error } = await supabase
       .from('pdf_short_links')
