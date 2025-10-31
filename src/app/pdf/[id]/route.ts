@@ -11,10 +11,10 @@ import { getFullUrl, trackAccess } from '@/lib/pdf-short-links';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const shortId = params.id;
+    const { id: shortId } = await params;
 
     // Validar formato do ID (6 caracteres alfanuméricos)
     if (!/^[a-z0-9]{6}$/.test(shortId)) {
