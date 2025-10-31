@@ -15,7 +15,7 @@ import {
   type Applicant,
 } from '@/lib/supabase-db';
 import { consultarCNPJ, formatarEndereco, formatarTelefone } from '@/lib/brasilapi';
-import { getApplicantData } from '@/lib/sumsub-api';
+import { getApplicantData, getSummaryReportPDF } from '@/lib/sumsub-api';
 import {
   generateContractToken,
   generateContractLink,
@@ -431,6 +431,63 @@ async function handleApplicantReviewed(data: any) {
     }
   }
 
+  // 🆕 Gerar e armazenar Summary Report PDF do Sumsub
+  let sumsubReportUrl: string | undefined;
+  try {
+    console.log('[Sumsub Report] Gerando Summary Report PDF...');
+    
+    // 1. Gerar PDF via API Sumsub
+    const pdfBuffer = await getSummaryReportPDF(
+      data.applicantId,
+      verificationType,
+      'pt'
+    );
+    
+    // 2. Fazer upload para Supabase Storage
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabase = await createClient();
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const shortId = data.applicantId.substring(0, 8);
+    const fileName = `sumsub_${verificationType}_${shortId}_${timestamp}.pdf`;
+    const filePath = `sumsub-reports/${fileName}`;
+    
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('screening-reports')
+      .upload(filePath, pdfBuffer, {
+        contentType: 'application/pdf',
+        upsert: false,
+      });
+    
+    if (uploadError) {
+      throw new Error(`Erro ao fazer upload: ${uploadError.message}`);
+    }
+    
+    console.log('[Sumsub Report] PDF uploaded:', filePath);
+    
+    // 3. Gerar URL assinada (válida por 1 ano)
+    const { data: signedUrlData } = await supabase.storage
+      .from('screening-reports')
+      .createSignedUrl(filePath, 365 * 24 * 60 * 60); // 1 ano
+    
+    if (!signedUrlData?.signedUrl) {
+      throw new Error('Erro ao gerar URL assinada');
+    }
+    
+    const fullUrl = signedUrlData.signedUrl;
+    
+    // 4. Criar link curto
+    const { createShortLink } = await import('@/lib/pdf-short-links');
+    const shortLink = await createShortLink(fullUrl, 'sumsub');
+    
+    sumsubReportUrl = shortLink;
+    console.log('[Sumsub Report] Link curto gerado:', sumsubReportUrl);
+    
+  } catch (error) {
+    console.error('[Sumsub Report] Erro ao gerar Summary Report:', error);
+    // Não bloquear o fluxo se falhar
+  }
+
   // Enviar notificação para WhatsApp
   const notification = createApplicantReviewedNotification({
     externalUserId,
@@ -441,6 +498,7 @@ async function handleApplicantReviewed(data: any) {
     reviewAnswer: reviewAnswer as 'GREEN' | 'RED' | 'YELLOW',
     reviewStatus,
     contractLink, // Adicionar magic link se aprovado
+    sumsubReportUrl, // Adicionar link do Summary Report
   });
 
   await sendWhatsAppNotification(notification);

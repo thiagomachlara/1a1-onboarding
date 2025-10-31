@@ -20,6 +20,7 @@ export interface OnboardingNotification {
   reviewAnswer?: 'GREEN' | 'RED' | 'YELLOW';
   message: string;
   contractLink?: string; // Magic link para assinatura de contrato
+  sumsubReportUrl?: string; // Link para Summary Report PDF do Sumsub
   walletAddress?: string; // Endereço da wallet cadastrada
   metadata?: Record<string, any>;
 }
@@ -101,6 +102,12 @@ function formatWhatsAppMessage(notification: OnboardingNotification): string {
   if (status === 'approved') {
     message += `\n✅ O cliente foi aprovado e já pode negociar USDT!`;
     
+    // Adicionar link do Summary Report do Sumsub se disponível
+    if (notification.sumsubReportUrl) {
+      message += `\n\n📄 *Dossiê completo (Sumsub):*`;
+      message += `\n${notification.sumsubReportUrl}`;
+    }
+    
     // Adicionar link de contrato se disponível
     if (notification.contractLink) {
       message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
@@ -116,10 +123,28 @@ function formatWhatsAppMessage(notification: OnboardingNotification): string {
     }
   } else if (status === 'rejected') {
     message += `\n❌ O onboarding foi rejeitado. Verifique os motivos no dashboard.`;
+    
+    // Adicionar link do Summary Report mesmo se rejeitado
+    if (notification.sumsubReportUrl) {
+      message += `\n\n📄 *Dossiê completo (Sumsub):*`;
+      message += `\n${notification.sumsubReportUrl}`;
+    }
   } else if (status === 'pending') {
     message += `\n⏳ Aguardando análise da equipe de compliance.`;
+    
+    // Adicionar link do Summary Report se disponível
+    if (notification.sumsubReportUrl) {
+      message += `\n\n📄 *Dossiê completo (Sumsub):*`;
+      message += `\n${notification.sumsubReportUrl}`;
+    }
   } else if (status === 'under_review') {
     message += `\n🔍 Documentos em análise. Pode ser necessário solicitar documentos adicionais.`;
+    
+    // Adicionar link do Summary Report se disponível
+    if (notification.sumsubReportUrl) {
+      message += `\n\n📄 *Dossiê completo (Sumsub):*`;
+      message += `\n${notification.sumsubReportUrl}`;
+    }
   }
 
   // Mensagens específicas para contrato e wallet
@@ -319,6 +344,7 @@ export function createApplicantReviewedNotification(data: {
   reviewAnswer: 'GREEN' | 'RED' | 'YELLOW';
   reviewStatus?: string;
   contractLink?: string;
+  sumsubReportUrl?: string;
 }): OnboardingNotification {
   let status: OnboardingNotification['status'];
   
@@ -343,6 +369,7 @@ export function createApplicantReviewedNotification(data: {
     status,
     reviewAnswer: data.reviewAnswer,
     contractLink: data.contractLink,
+    sumsubReportUrl: data.sumsubReportUrl,
     message: `Onboarding ${status === 'approved' ? 'aprovado' : status === 'rejected' ? 'rejeitado' : 'em revisão'}`,
   };
 }

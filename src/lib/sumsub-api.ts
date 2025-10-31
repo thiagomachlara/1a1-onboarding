@@ -51,6 +51,33 @@ async function sumsubRequest(method: string, path: string, body?: any) {
 }
 
 /**
+ * Faz requisição autenticada para a API Sumsub e retorna resposta binária (para PDFs)
+ */
+async function sumsubRequestBinary(method: string, path: string): Promise<Buffer> {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = generateSignature(method, path, timestamp);
+
+  const headers: Record<string, string> = {
+    'X-App-Token': SUMSUB_APP_TOKEN,
+    'X-App-Access-Sig': signature,
+    'X-App-Access-Ts': timestamp.toString(),
+  };
+
+  const response = await fetch(`${SUMSUB_BASE_URL}${path}`, {
+    method,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Sumsub API error: ${response.status} - ${error}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+/**
  * Dados completos de um aplicante
  */
 export interface SumsubApplicantData {
@@ -163,6 +190,34 @@ CNPJ: ${data.registrationNumber || 'N/A'}
 Email: ${data.email || 'N/A'}
 Telefone: ${data.phone || 'N/A'}
     `.trim();
+  }
+}
+
+/**
+ * Gera e baixa o Summary Report em PDF de um aplicante
+ * 
+ * @param applicantId - ID do aplicante no Sumsub
+ * @param type - Tipo de aplicante ('individual' ou 'company')
+ * @param lang - Idioma do relatório ('en' ou 'pt')
+ * @returns Buffer contendo o PDF
+ */
+export async function getSummaryReportPDF(
+  applicantId: string,
+  type: 'individual' | 'company',
+  lang: 'en' | 'pt' = 'pt'
+): Promise<Buffer> {
+  try {
+    const reportType = type === 'individual' ? 'applicantReport' : 'companyReport';
+    const path = `/resources/applicants/${applicantId}/summary/report?report=${reportType}&lang=${lang}`;
+    
+    console.log(`[Sumsub] Gerando Summary Report PDF para ${applicantId} (${type}, ${lang})`);
+    const pdfBuffer = await sumsubRequestBinary('GET', path);
+    console.log(`[Sumsub] Summary Report PDF gerado com sucesso (${pdfBuffer.length} bytes)`);
+    
+    return pdfBuffer;
+  } catch (error) {
+    console.error('[Sumsub] Erro ao gerar Summary Report PDF:', error);
+    throw error;
   }
 }
 
