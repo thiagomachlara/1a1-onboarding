@@ -132,6 +132,12 @@ function ContractPageContent() {
                 <p className="text-sm text-gray-600">Email</p>
                 <p className="font-medium text-gray-900">{applicant.email || 'Não informado'}</p>
               </div>
+              {applicant.applicant_type === 'company' && applicant.ubo_name && (
+                <div>
+                  <p className="text-sm text-gray-600">Representante Legal</p>
+                  <p className="font-medium text-gray-900">{applicant.ubo_name}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

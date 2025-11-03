@@ -94,6 +94,7 @@ export interface SumsubApplicantData {
   // Pessoa Jurídica
   companyName?: string;
   registrationNumber?: string; // CNPJ
+  uboName?: string; // Nome do UBO (Ultimate Beneficial Owner)
   
   // Comum
   email?: string;
@@ -163,6 +164,19 @@ export async function getApplicantData(applicantId: string): Promise<SumsubAppli
       // Email e telefone (pode estar em info ou companyInfo)
       result.email = data.info?.email || companyInfo.email;
       result.phone = data.info?.phone || companyInfo.phone;
+      
+      // UBO (Ultimate Beneficial Owner) - buscar primeiro UBO se disponível
+      if (companyInfo.beneficialOwners && companyInfo.beneficialOwners.length > 0) {
+        const firstUBO = companyInfo.beneficialOwners[0];
+        if (firstUBO.firstName && firstUBO.lastName) {
+          result.uboName = `${firstUBO.firstName} ${firstUBO.lastName}`.trim();
+        }
+        // Se email da empresa não estiver disponível, usar email do UBO
+        if (!result.email && firstUBO.email) {
+          result.email = firstUBO.email;
+          console.log('📧 Email obtido do UBO (sócio)');
+        }
+      }
     }
 
     return result;

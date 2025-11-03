@@ -23,6 +23,7 @@ export interface Applicant {
   company_name?: string;
   email?: string;
   phone?: string;
+  ubo_name?: string; // Nome do UBO (Ultimate Beneficial Owner) para PJ
   created_at?: string;
   updated_at?: string;
   first_verification_at?: string;
