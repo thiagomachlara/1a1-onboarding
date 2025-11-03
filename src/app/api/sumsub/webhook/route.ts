@@ -335,12 +335,14 @@ async function handleApplicantPending(data: any) {
  * Handler para evento applicantReviewed
  */
 async function handleApplicantReviewed(data: any) {
-  const { externalUserId, reviewResult, reviewStatus } = data;
+  const { externalUserId, reviewResult, reviewStatus, correlationId } = data;
   
-  console.log('Applicant reviewed:', {
+  console.log('📥 Webhook applicantReviewed recebido:', {
     userId: externalUserId,
     result: reviewResult?.reviewAnswer,
     status: reviewStatus,
+    correlationId,
+    timestamp: new Date().toISOString(),
   });
 
   const verificationType = extractVerificationType(data);
@@ -351,6 +353,18 @@ async function handleApplicantReviewed(data: any) {
   
   // Buscar dados do banco como fallback adicional
   const existingApplicant = await getApplicantByExternalUserId(externalUserId);
+  
+  // 🆕 CORREÇÃO: Verificar estado anterior para prevenir notificações duplicadas
+  const wasAlreadyApproved = existingApplicant?.current_status === 'approved';
+  const wasAlreadyRejected = existingApplicant?.current_status === 'rejected';
+  
+  console.log('📊 Estado anterior do applicant:', {
+    currentStatus: existingApplicant?.current_status,
+    wasAlreadyApproved,
+    wasAlreadyRejected,
+    hasContractToken: !!existingApplicant?.contract_token,
+    contractSigned: !!existingApplicant?.contract_signed_at,
+  });
   if (existingApplicant) {
     name = name || existingApplicant.full_name || existingApplicant.company_name;
     email = email || existingApplicant.email;
@@ -488,21 +502,59 @@ async function handleApplicantReviewed(data: any) {
     // Não bloquear o fluxo se falhar
   }
 
-  // Enviar notificação para WhatsApp
-  const notification = createApplicantReviewedNotification({
-    externalUserId,
-    verificationType,
-    name,
-    email,
-    document,
-    reviewAnswer: reviewAnswer as 'GREEN' | 'RED' | 'YELLOW',
-    reviewStatus,
-    rejectionReason, // Adicionar motivos de rejeição
-    contractLink, // Adicionar magic link se aprovado
-    sumsubReportUrl, // Adicionar link do Summary Report
+  // 🆕 CORREÇÃO: Só enviar notificação se houver mudança de estado
+  const isNowApproved = reviewAnswer === 'GREEN';
+  const isNowRejected = reviewAnswer === 'RED';
+  
+  let shouldNotify = false;
+  let notificationReason = '';
+  
+  if (isNowApproved && !wasAlreadyApproved) {
+    shouldNotify = true;
+    notificationReason = 'Nova aprovação';
+  } else if (isNowRejected && !wasAlreadyRejected) {
+    shouldNotify = true;
+    notificationReason = 'Nova rejeição';
+  } else if (isNowApproved && wasAlreadyApproved) {
+    shouldNotify = false;
+    notificationReason = 'Já estava aprovado - pulando notificação duplicada';
+  } else if (isNowRejected && wasAlreadyRejected) {
+    shouldNotify = false;
+    notificationReason = 'Já estava rejeitado - pulando notificação duplicada';
+  } else {
+    // Status YELLOW ou outros
+    shouldNotify = true;
+    notificationReason = 'Mudança de estado';
+  }
+  
+  console.log('🔔 Decisão de notificação:', {
+    shouldNotify,
+    reason: notificationReason,
+    reviewAnswer,
+    wasAlreadyApproved,
+    wasAlreadyRejected,
   });
+  
+  if (shouldNotify) {
+    // Enviar notificação para WhatsApp
+    const notification = createApplicantReviewedNotification({
+      externalUserId,
+      verificationType,
+      name,
+      email,
+      document,
+      reviewAnswer: reviewAnswer as 'GREEN' | 'RED' | 'YELLOW',
+      reviewStatus,
+      rejectionReason,
+      contractLink,
+      sumsubReportUrl,
+    });
 
-  await sendWhatsAppNotification(notification);
+    await sendWhatsAppNotification(notification);
+    console.log('✅ Notificação enviada:', { externalUserId, reviewAnswer });
+  } else {
+    console.log('⏭️  Notificação pulada:', { externalUserId, reason: notificationReason });
+  }
 }
 
 /**

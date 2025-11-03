@@ -12,9 +12,41 @@ const supabase = createClient(
 );
 
 /**
- * Gera token único para contrato
+ * Gera ou reutiliza token válido para contrato
+ * 🆕 CORREÇÃO: Reutilizar tokens válidos para evitar invalidação de links
  */
 export async function generateContractToken(applicantId: string): Promise<string> {
+  // 🆕 Verificar se já existe token válido
+  const { data: existingApplicant } = await supabase
+    .from('applicants')
+    .select('contract_token, contract_token_expires_at, contract_signed_at')
+    .eq('id', applicantId)
+    .single();
+  
+  // 🆕 Reutilizar token se ainda válido e não assinado
+  if (existingApplicant?.contract_token && !existingApplicant.contract_signed_at) {
+    const expiresAt = new Date(existingApplicant.contract_token_expires_at);
+    const now = new Date();
+    
+    // Se ainda tem mais de 1 dia de validade, reutilizar
+    const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    if (expiresAt > oneDayFromNow) {
+      console.log('✅ Reutilizando token válido existente:', {
+        applicantId,
+        expiresAt: expiresAt.toISOString(),
+        daysRemaining: Math.floor((expiresAt.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)),
+      });
+      return existingApplicant.contract_token;
+    } else {
+      console.log('⏰ Token existente expira em menos de 1 dia, gerando novo');
+    }
+  } else if (existingApplicant?.contract_signed_at) {
+    console.log('✍️  Contrato já assinado, gerando novo token');
+  } else {
+    console.log('🆕 Nenhum token existente, gerando novo');
+  }
+  
+  // Gerar novo token apenas se necessário
   const token = randomUUID();
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7); // Expira em 7 dias
@@ -32,6 +64,11 @@ export async function generateContractToken(applicantId: string): Promise<string
     throw new Error('Failed to generate contract token');
   }
 
+  console.log('✅ Novo token gerado:', {
+    applicantId,
+    expiresAt: expiresAt.toISOString(),
+  });
+  
   return token;
 }
 
