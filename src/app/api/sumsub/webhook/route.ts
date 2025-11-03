@@ -493,8 +493,9 @@ async function handleApplicantReviewed(data: any) {
     const fullUrl = signedUrlData.signedUrl;
     
     // 4. Criar link curto
-    const { createShortLink } = await import('@/lib/pdf-short-links');
-    const shortLink = await createShortLink(fullUrl, 'sumsub');
+    const { createShortLink, buildShortUrl } = await import('@/lib/pdf-short-links');
+    const shortId = await createShortLink(fullUrl, 'sumsub');
+    const shortLink = buildShortUrl(shortId);
     
     sumsubReportUrl = shortLink;
     console.log('[Sumsub Report] Link curto gerado:', sumsubReportUrl);
