@@ -78,10 +78,10 @@ function RefreshContent() {
       }
 
       const tokenData = await tokenResponse.json();
-      
       setAccessToken(tokenData.token);
       setIsLoading(false);
 
+      console.log('[Refresh] Inicialização completa!');
     } catch (err: any) {
       console.error('[Refresh] Erro:', err);
       setError(err.message || 'Erro ao inicializar atualização de KYC');
@@ -91,92 +91,149 @@ function RefreshContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4">
-        <div className="bg-red-900/20 border border-red-500 rounded-lg p-8 max-w-md w-full text-center">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-white mb-4">Erro</h2>
-          <p className="text-gray-300 mb-6">{error}</p>
-          <a
-            href="/"
-            className="inline-block bg-yellow-400 text-black px-6 py-3 rounded-lg font-semibold hover:bg-yellow-500 transition"
-          >
-            Voltar para Início
-          </a>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* Header */}
+        <header className="bg-white shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <Image
+                src="/1a1-logo.png"
+                alt="1A1 Cripto"
+                width={200}
+                height={60}
+                priority
+              />
+              <a
+                href="/"
+                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Voltar para Início
+              </a>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 text-center">
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Erro</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <a
+              href="/"
+              className="inline-block bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-6 py-3 rounded-lg font-semibold transition-colors"
+            >
+              Voltar para Início
+            </a>
+          </div>
+        </main>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-yellow-400 mx-auto mb-4"></div>
-          <p className="text-white text-lg">Carregando...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* Header */}
+        <header className="bg-white shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <Image
+                src="/1a1-logo.png"
+                alt="1A1 Cripto"
+                width={200}
+                height={60}
+                priority
+              />
+              <a
+                href="/"
+                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Voltar para Início
+              </a>
+            </div>
+          </div>
+        </header>
+
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-yellow-400 mx-auto mb-4"></div>
+            <p className="text-gray-600 text-lg">Carregando...</p>
+          </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-      <header className="border-b border-gray-700 bg-black/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-6">
-          <Image
-            src="/logo.png"
-            alt="1A1 Cripto"
-            width={120}
-            height={40}
-            className="h-10 w-auto"
-          />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <Image
+              src="/1a1-logo.png"
+              alt="1A1 Cripto"
+              width={200}
+              height={60}
+              priority
+            />
+            <a
+              href="/"
+              className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Voltar para Início
+            </a>
+          </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-8 mb-8">
-            <div className="flex items-start space-x-4">
-              <div className="text-yellow-400 text-4xl">🔄</div>
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold text-white mb-2">
-                  Atualização de KYC
-                </h1>
-                {companyName && (
-                  <p className="text-xl text-gray-300 mb-4">{companyName}</p>
-                )}
-                <div className="bg-blue-900/30 border border-blue-500/50 rounded-lg p-4">
-                  <p className="text-gray-200 mb-2">
-                    ✅ Seus documentos já aprovados <strong>não precisam ser reenviados</strong>
-                  </p>
-                  <p className="text-gray-200">
-                    📝 Você só precisa <strong>preencher o questionário atualizado</strong>
-                  </p>
-                </div>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        {/* Info Card */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 mb-8">
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0 w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center text-2xl">
+              🔄
+            </div>
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Atualização de KYC
+              </h1>
+              {companyName && (
+                <p className="text-xl text-gray-600 mb-4">{companyName}</p>
+              )}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-gray-700 mb-2">
+                  ✅ Seus documentos já aprovados <strong>não precisam ser reenviados</strong>
+                </p>
+                <p className="text-gray-700">
+                  📝 Você só precisa <strong>preencher o questionário atualizado</strong>
+                </p>
               </div>
             </div>
           </div>
-
-          {accessToken && userId && (
-            <div className="bg-white rounded-lg shadow-2xl overflow-hidden">
-              <SumsubWebSDK
-                accessToken={accessToken}
-                expirationHandler={async () => {
-                  // Renovar token quando expirar
-                  const response = await fetch('/api/sumsub/access-token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      externalUserId: userId,
-                      levelName: 'kyb-onboarding-completo',
-                    }),
-                  });
-                  const data = await response.json();
-                  return data.token;
-                }}
-              />
-            </div>
-          )}
         </div>
+
+        {/* Sumsub SDK */}
+        {accessToken && userId && (
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <SumsubWebSDK
+              accessToken={accessToken}
+              expirationHandler={async () => {
+                // Renovar token quando expirar
+                const response = await fetch('/api/sumsub/access-token', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    userId: userId,
+                    levelName: 'kyb-onboarding-completo',
+                  }),
+                });
+                const data = await response.json();
+                return data.token;
+              }}
+            />
+          </div>
+        )}
       </main>
     </div>
   );
@@ -185,7 +242,7 @@ function RefreshContent() {
 export default function RefreshPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-yellow-400"></div>
       </div>
     }>
