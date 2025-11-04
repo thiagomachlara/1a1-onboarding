@@ -2,7 +2,7 @@
  * Envia notificação para webhook externo (Lovable)
  */
 export async function sendWebhookNotification(payload: any): Promise<void> {
-  const webhookUrl = process.env.LOVABLE_WEBHOOK_URL;
+  const webhookUrl = process.env.WHATSAPP_WEBHOOK_URL;
 
   if (!webhookUrl) {
     console.warn('[Webhook] URL não configurada, pulando envio');
