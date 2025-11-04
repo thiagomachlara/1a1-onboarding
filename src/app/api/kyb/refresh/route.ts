@@ -86,9 +86,12 @@ export async function POST(request: NextRequest) {
       },
     };
 
+    console.log('[Refresh] Iniciando envio de webhook...');
+    console.log('[Refresh] Webhook URL configurada:', !!process.env.WHATSAPP_WEBHOOK_URL);
+    
     try {
       await sendWebhookNotification(webhookPayload);
-      console.log('[Refresh] Webhook enviado com sucesso');
+      console.log('[Refresh] Webhook enviado com sucesso!');
     } catch (error) {
       console.error('[Refresh] Erro ao enviar webhook:', error);
       // Não falha a requisição se webhook falhar
