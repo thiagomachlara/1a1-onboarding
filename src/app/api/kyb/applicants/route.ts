@@ -26,10 +26,10 @@ export async function GET(request: NextRequest) {
     
     // Build query
     let query = supabase
-      .from('onboarding_notifications')
+      .from('applicants')
       .select('*', { count: 'exact' })
-      .eq('verification_type', type)
-      .order('reviewed_at', { ascending: false });
+      .eq('applicant_type', type)
+      .order('approved_at', { ascending: false });
     
     // Apply filters
     if (status) {
@@ -37,14 +37,14 @@ export async function GET(request: NextRequest) {
     }
     
     if (search) {
-      query = query.or(`name.ilike.%${search}%,document.ilike.%${search}%,email.ilike.%${search}%`);
+      query = query.or(`company_name.ilike.%${search}%,full_name.ilike.%${search}%,document_number.ilike.%${search}%,email.ilike.%${search}%`);
     }
     
     // Filter by minimum days since approval
     if (minDays) {
       const minDate = new Date();
       minDate.setDate(minDate.getDate() - parseInt(minDays));
-      query = query.lte('reviewed_at', minDate.toISOString());
+      query = query.lte('approved_at', minDate.toISOString());
     }
     
     // Execute query with pagination
@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
     const applicantsWithDays = data?.map(applicant => {
       let daysSinceApproval = null;
       
-      if (applicant.reviewed_at) {
-        const reviewedDate = new Date(applicant.reviewed_at);
+      if (applicant.approved_at) {
+        const reviewedDate = new Date(applicant.approved_at);
         const now = new Date();
         const diffTime = Math.abs(now.getTime() - reviewedDate.getTime());
         daysSinceApproval = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

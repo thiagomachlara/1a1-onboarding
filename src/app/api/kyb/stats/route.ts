@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
     
     // Get all applicants of specified type
     const { data: applicants, error } = await supabase
-      .from('onboarding_notifications')
+      .from('applicants')
       .select('*')
-      .eq('verification_type', type);
+      .eq('applicant_type', type);
     
     if (error) {
       throw error;
@@ -36,8 +36,8 @@ export async function GET(request: NextRequest) {
     let needsRefreshSoon = 0; // 150-179 days
     
     applicants?.forEach(applicant => {
-      if (applicant.reviewed_at && applicant.review_answer === 'GREEN') {
-        const reviewedDate = new Date(applicant.reviewed_at);
+      if (applicant.approved_at && applicant.review_answer === 'GREEN') {
+        const reviewedDate = new Date(applicant.approved_at);
         const diffTime = Math.abs(now.getTime() - reviewedDate.getTime());
         const daysSinceApproval = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
     const recentApprovals = applicants?.filter(a => {
-      if (!a.reviewed_at) return false;
-      const reviewedDate = new Date(a.reviewed_at);
+      if (!a.approved_at) return false;
+      const reviewedDate = new Date(a.approved_at);
       return reviewedDate >= thirtyDaysAgo && a.review_answer === 'GREEN';
     }).length || 0;
     
