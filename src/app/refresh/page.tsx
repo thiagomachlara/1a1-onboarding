@@ -67,7 +67,7 @@ function RefreshContent() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          externalUserId: applicant.external_user_id,
+          userId: applicant.external_user_id,
           levelName: 'kyb-onboarding-completo',
         }),
       });
