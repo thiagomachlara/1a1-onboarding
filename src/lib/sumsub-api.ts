@@ -235,3 +235,39 @@ export async function getSummaryReportPDF(
   }
 }
 
+
+/**
+ * Reseta apenas o questionnaire de um aplicante para refresh de dados financeiros
+ * 
+ * @param applicantId - ID do aplicante no Sumsub
+ * @param levelName - Nome do level atual (padrão: kyb-onboarding-completo)
+ * @returns Resposta da API Sumsub
+ */
+export async function resetQuestionnaireForRefresh(
+  applicantId: string,
+  levelName: string = 'kyb-onboarding-completo'
+): Promise<any> {
+  try {
+    console.log(`[Sumsub] Resetando questionnaire para refresh - Applicant: ${applicantId}`);
+    
+    const path = `/resources/applicants/${applicantId}/moveToLevel`;
+    
+    const body = {
+      name: levelName,
+      docSets: [
+        {
+          idDocSetType: 'QUESTIONNAIRE'
+        }
+      ]
+    };
+    
+    const response = await sumsubRequest('POST', path, body);
+    console.log('[Sumsub] Questionnaire resetado com sucesso');
+    
+    return response;
+  } catch (error) {
+    console.error('[Sumsub] Erro ao resetar questionnaire:', error);
+    throw error;
+  }
+}
+
