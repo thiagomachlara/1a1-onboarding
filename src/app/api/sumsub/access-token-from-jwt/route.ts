@@ -32,8 +32,7 @@ export async function POST(request: NextRequest) {
     // Gerar access token do Sumsub
     const accessToken = await generateAccessToken(
       payload.externalUserId,
-      'kyb-onboarding-completo',
-      600 // 10 minutos
+      'kyb-onboarding-completo'
     );
 
     return NextResponse.json({
