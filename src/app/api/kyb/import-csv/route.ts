@@ -6,17 +6,17 @@ export const maxDuration = 300; // 5 minutes
 
 interface CSVRow {
   applicantId: string;
-  externalUserId: string;
-  createdAt: string;
-  reviewedAt: string;
-  companyName: string;
-  email: string;
-  phone: string;
-  country: string;
-  reviewStatus: string;
-  levelName: string;
-  applicantPlatform: string;
-  reviewResult: string;
+  externalId: string;
+  creationDate: string;
+  lastReviewDate: string;
+  applicantName: string;
+  applicantEmail: string;
+  applicantPhoneNumber: string;
+  applicantCountry: string;
+  result: string;
+  applicantLevel: string;
+  platform: string;
+  status: string;
 }
 
 function parseCSV(csvText: string): CSVRow[] {
@@ -83,13 +83,13 @@ export async function POST(request: NextRequest) {
     for (const row of rows) {
       try {
         // Skip if not completed
-        if (row.reviewResult !== 'completed') {
+        if (row.status !== 'completed') {
           skipped++;
           continue;
         }
         
         // Skip if no reviewed_at date
-        const reviewedAt = parseDatetime(row.reviewedAt);
+        const reviewedAt = parseDatetime(row.lastReviewDate);
         if (!reviewedAt) {
           skipped++;
           continue;
@@ -98,19 +98,19 @@ export async function POST(request: NextRequest) {
         // Prepare data
         const data = {
           applicant_id: row.applicantId,
-          external_user_id: row.externalUserId,
-          name: row.companyName,
-          email: row.email,
-          document: row.externalUserId.replace('cnpj_', '').replace('unil-', ''),
+          external_user_id: row.externalId,
+          name: row.applicantName,
+          email: row.applicantEmail,
+          document: row.externalId.replace('cnpj_', '').replace('unil-', '').replace('dash-', ''),
           verification_type: 'company',
-          review_answer: row.reviewStatus === 'GREEN' ? 'GREEN' : 'RED',
-          level_name: row.levelName,
-          created_at: parseDatetime(row.createdAt),
+          review_answer: row.result === 'GREEN' ? 'GREEN' : 'RED',
+          level_name: row.applicantLevel,
+          created_at: parseDatetime(row.creationDate),
           reviewed_at: reviewedAt,
           payload: {
-            country: row.country,
-            phone: row.phone,
-            platform: row.applicantPlatform,
+            country: row.applicantCountry,
+            phone: row.applicantPhoneNumber,
+            platform: row.platform,
             imported_from_csv: true,
             imported_at: new Date().toISOString()
           }
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
         
         if (error) {
           errors++;
-          errorDetails.push(`${row.companyName}: ${error.message}`);
+          errorDetails.push(`${row.applicantName}: ${error.message}`);
         } else {
           imported++;
         }
