@@ -73,17 +73,19 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
       applicant: {
         id: applicant.applicant_id,
-        externalUserId: applicant.external_user_id,
-        companyName: applicant.company_name,
-        document: applicant.document,
+        type: 'company' as const,
+        name: applicant.company_name,
         email: applicant.email,
+        document: applicant.document,
       },
-      refresh: {
-        link: refreshLink,
-        requestedBy: 'compliance',
-        daysSinceApproval,
+      status: 'refresh_requested' as const,
+      message: `KYC Refresh solicitado - ${applicant.company_name} - ${daysSinceApproval} dias desde aprovação`,
+      whatsapp_message: `🔄 *Atualização de KYC Solicitada*\n\n📋 Empresa: ${applicant.company_name}\n⏰ Aprovado há ${daysSinceApproval} dias\n\n🔗 *Link para atualizar:*\n${refreshLink}\n\n✅ Por favor, acesse o link e atualize as informações cadastrais em até 30 dias.`,
+      metadata: {
+        refresh_link: refreshLink,
+        requested_by: 'compliance',
+        days_since_approval: daysSinceApproval,
       },
-      message: `🔄 Atualização de KYC solicitada para ${applicant.company_name}`,
     };
 
     try {
