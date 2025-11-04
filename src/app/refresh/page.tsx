@@ -135,12 +135,20 @@ function RefreshContent() {
             </div>
           </div>
 
-          {accessToken && userId && (
+          {accessToken && (
             <div className="bg-white rounded-lg shadow-2xl overflow-hidden">
               <SumsubWebSDK
                 accessToken={accessToken}
-                userId={userId}
-                levelName="kyb-onboarding-completo"
+                expirationHandler={async () => {
+                  // Renovar token quando expirar
+                  const response = await fetch('/api/sumsub/access-token-from-jwt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token }),
+                  });
+                  const data = await response.json();
+                  return data.token.token;
+                }}
               />
             </div>
           )}
