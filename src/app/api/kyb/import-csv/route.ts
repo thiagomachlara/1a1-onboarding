@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes
+// Updated: 2025-11-04 07:45
 
 interface CSVRow {
   applicantId: string;
@@ -82,8 +83,11 @@ export async function POST(request: NextRequest) {
     
     for (const row of rows) {
       try {
+        console.log('[Import] Processing:', row.applicantName, 'status:', row.status);
+        
         // Skip if not completed
         if (row.status !== 'completed') {
+          console.log('[Import] Skipped - not completed');
           skipped++;
           continue;
         }
