@@ -1,6 +1,12 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
+import type { StringValue } from 'ms';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// Garantir que JWT_SECRET está definido
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET não está configurado nas variáveis de ambiente');
+}
+
+const JWT_SECRET: string = process.env.JWT_SECRET;
 
 export interface RefreshTokenPayload {
   applicantId: string;
@@ -17,9 +23,10 @@ export interface RefreshTokenPayload {
  */
 export function generateRefreshToken(
   payload: Omit<RefreshTokenPayload, 'exp'>,
-  expiresIn: string = '7d'
+  expiresIn: StringValue = '7d'
 ): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn });
+  const options: SignOptions = { expiresIn };
+  return jwt.sign(payload, JWT_SECRET, options);
 }
 
 /**
