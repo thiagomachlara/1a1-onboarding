@@ -16,7 +16,7 @@ const SumsubWebSDK = dynamic(() => import('@/components/SumsubWebSDK'), {
 
 function RefreshContent() {
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const applicantId = searchParams.get('applicantId');
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -25,40 +25,61 @@ function RefreshContent() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) {
-      setError('Token não fornecido. Por favor, use o link enviado por email.');
+    if (!applicantId) {
+      setError('Link inválido. Por favor, use o link enviado via WhatsApp.');
       setIsLoading(false);
       return;
     }
 
     initializeRefresh();
-  }, [token]);
+  }, [applicantId]);
 
   const initializeRefresh = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      console.log('[Refresh] Validando token...');
+      console.log('[Refresh] Buscando dados do applicant:', applicantId);
 
-      const response = await fetch('/api/sumsub/access-token-from-jwt', {
+      // Buscar dados do applicant
+      const applicantResponse = await fetch(`/api/kyb/applicants?applicantId=${applicantId}`);
+      
+      if (!applicantResponse.ok) {
+        throw new Error('Applicant não encontrado');
+      }
+
+      const applicantData = await applicantResponse.json();
+      const applicant = applicantData.applicants?.[0];
+
+      if (!applicant) {
+        throw new Error('Applicant não encontrado');
+      }
+
+      setCompanyName(applicant.company_name);
+      setUserId(applicant.external_user_id);
+
+      console.log('[Refresh] Gerando access token para Sumsub...');
+
+      // Gerar access token do Sumsub
+      const tokenResponse = await fetch('/api/sumsub/access-token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({
+          externalUserId: applicant.external_user_id,
+          levelName: 'kyb-onboarding-completo',
+        }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Falha ao validar token');
+      if (!tokenResponse.ok) {
+        const errorData = await tokenResponse.json();
+        throw new Error(errorData.error || 'Falha ao gerar token de acesso');
       }
 
-      const data = await response.json();
+      const tokenData = await tokenResponse.json();
       
-      setAccessToken(data.token);
-      setUserId(data.userId);
-      setCompanyName(data.companyName);
+      setAccessToken(tokenData.token);
       setIsLoading(false);
 
     } catch (err: any) {
@@ -135,19 +156,22 @@ function RefreshContent() {
             </div>
           </div>
 
-          {accessToken && (
+          {accessToken && userId && (
             <div className="bg-white rounded-lg shadow-2xl overflow-hidden">
               <SumsubWebSDK
                 accessToken={accessToken}
                 expirationHandler={async () => {
                   // Renovar token quando expirar
-                  const response = await fetch('/api/sumsub/access-token-from-jwt', {
+                  const response = await fetch('/api/sumsub/access-token', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token }),
+                    body: JSON.stringify({
+                      externalUserId: userId,
+                      levelName: 'kyb-onboarding-completo',
+                    }),
                   });
                   const data = await response.json();
-                  return data.token.token;
+                  return data.token;
                 }}
               />
             </div>

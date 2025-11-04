@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApplicantByApplicantId } from '@/lib/supabase-db';
 import { resetQuestionnaireForRefresh } from '@/lib/sumsub-api';
-import { generateRefreshToken } from '@/lib/jwt-utils';
 import { sendWebhookNotification } from '@/lib/webhook-sender';
 import { createClient } from '@/lib/supabase/server';
 
@@ -9,7 +8,7 @@ import { createClient } from '@/lib/supabase/server';
  * POST /api/kyb/refresh
  * 
  * Reseta o questionnaire de uma empresa para refresh de dados financeiros
- * Gera link com token e envia notificação via webhook
+ * Gera link com applicantId e envia notificação via webhook
  * 
  * Body: { applicantId: string }
  */
@@ -42,25 +41,13 @@ export async function POST(request: NextRequest) {
       externalUserId: applicant.external_user_id,
     });
 
-    // 2. Gerar token JWT (válido por 7 dias)
-    const token = generateRefreshToken({
-      applicantId: applicant.applicant_id,
-      externalUserId: applicant.external_user_id,
-      companyName: applicant.company_name,
-      document: applicant.document,
-    });
-
-    // 3. Criar link completo
+    // 2. Criar link direto com applicantId
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://onboarding.1a1cripto.com';
-    const refreshLink = `${baseUrl}/refresh?token=${token}`;
-
-    // 4. Calcular data de expiração
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    const refreshLink = `${baseUrl}/refresh?applicantId=${applicant.applicant_id}`;
 
     console.log('[Refresh] Link gerado:', refreshLink);
 
-    // 5. Resetar questionário no Sumsub
+    // 3. Resetar questionário no Sumsub
     try {
       await resetQuestionnaireForRefresh(
         applicant.applicant_id,
@@ -75,12 +62,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Calcular dias desde aprovação
+    // 4. Calcular dias desde aprovação
     const daysSinceApproval = applicant.approved_at 
       ? Math.floor((Date.now() - new Date(applicant.approved_at).getTime()) / (1000 * 60 * 60 * 24))
       : 0;
 
-    // 7. Enviar notificação pro webhook Lovable
+    // 5. Enviar notificação pro webhook Lovable
     const webhookPayload = {
       event: 'kyc_refresh_requested',
       timestamp: new Date().toISOString(),
@@ -93,7 +80,6 @@ export async function POST(request: NextRequest) {
       },
       refresh: {
         link: refreshLink,
-        expiresAt: expiresAt.toISOString(),
         requestedBy: 'compliance',
         daysSinceApproval,
       },
@@ -108,7 +94,7 @@ export async function POST(request: NextRequest) {
       // Não falha a requisição se webhook falhar
     }
 
-    // 8. Atualizar banco de dados
+    // 6. Atualizar banco de dados
     const supabase = createClient();
     const { error: updateError } = await supabase
       .from('applicants')
@@ -127,7 +113,6 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Refresh solicitado com sucesso',
       link: refreshLink,
-      expiresAt: expiresAt.toISOString(),
     });
 
   } catch (error: any) {
