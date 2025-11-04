@@ -122,9 +122,32 @@ export async function POST(request: NextRequest) {
         
         // Upsert to Supabase
         const { error } = await supabase
-          .from('onboarding_notifications')
-          .upsert(data, {
-            onConflict: 'applicant_id'
+          .from('applicants')
+          .upsert({
+            external_user_id: row.externalId,
+            applicant_id: row.applicantId,
+            applicant_type: 'company',
+            current_status: 'approved',
+            review_answer: row.result === 'GREEN' ? 'GREEN' : 'RED',
+            document_number: row.externalId.replace('cnpj_', '').replace('unil-', '').replace('dash-', ''),
+            full_name: row.applicantName,
+            company_name: row.applicantName,
+            email: row.applicantEmail,
+            phone: row.applicantPhoneNumber,
+            created_at: parseDatetime(row.creationDate) || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            first_verification_at: reviewedAt,
+            last_verification_at: reviewedAt,
+            approved_at: reviewedAt,
+            sumsub_level_name: row.applicantLevel,
+            sumsub_review_result: {
+              country: row.applicantCountry,
+              platform: row.platform,
+              imported_from_csv: true,
+              imported_at: new Date().toISOString()
+            }
+          }, {
+            onConflict: 'external_user_id'
           });
         
         if (error) {
@@ -136,7 +159,7 @@ export async function POST(request: NextRequest) {
         
       } catch (error: any) {
         errors++;
-        errorDetails.push(`${row.companyName}: ${error.message}`);
+        errorDetails.push(`${row.applicantName}: ${error.message}`);
       }
     }
     
