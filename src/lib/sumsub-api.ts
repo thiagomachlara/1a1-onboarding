@@ -271,3 +271,28 @@ export async function resetQuestionnaireForRefresh(
   }
 }
 
+/**
+ * Gera access token para o SDK do Sumsub
+ * 
+ * @param externalUserId - ID externo do usuário (ex: cnpj_xxx ou unil-xxx)
+ * @param levelName - Nome do level (padrão: kyb-onboarding-completo)
+ * @returns Access token para o SDK
+ */
+export async function generateAccessToken(
+  externalUserId: string,
+  levelName: string = 'kyb-onboarding-completo'
+): Promise<{ token: string; userId: string }> {
+  try {
+    console.log(`[Sumsub] Gerando access token - User: ${externalUserId}, Level: ${levelName}`);
+    
+    const path = `/resources/accessTokens?userId=${externalUserId}&levelName=${levelName}&ttlInSecs=600`;
+    
+    const response = await sumsubRequest('POST', path);
+    console.log('[Sumsub] Access token gerado com sucesso');
+    
+    return response;
+  } catch (error) {
+    console.error('[Sumsub] Erro ao gerar access token:', error);
+    throw error;
+  }
+}
