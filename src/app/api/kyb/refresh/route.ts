@@ -47,19 +47,17 @@ export async function POST(request: NextRequest) {
 
     console.log('[Refresh] Link gerado:', refreshLink);
 
-    // 3. Resetar questionário no Sumsub
+    // 3. Resetar questionário no Sumsub (opcional - não bloqueia o fluxo)
     try {
       await resetQuestionnaireForRefresh(
         applicant.applicant_id,
         'kyb-onboarding-completo'
       );
-      console.log('[Refresh] Questionário resetado no Sumsub');
+      console.log('[Refresh] Questionário resetado no Sumsub com sucesso');
     } catch (error) {
-      console.error('[Refresh] Erro ao resetar questionário:', error);
-      return NextResponse.json(
-        { success: false, error: 'Erro ao resetar questionário no Sumsub' },
-        { status: 500 }
-      );
+      console.error('[Refresh] Erro ao resetar questionário (não crítico):', error);
+      // Não falha a requisição - o reset é opcional
+      // O importante é enviar o webhook e o link para o cliente
     }
 
     // 4. Calcular dias desde aprovação
