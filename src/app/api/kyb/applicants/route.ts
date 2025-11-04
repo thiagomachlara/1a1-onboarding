@@ -7,6 +7,12 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     
+    // Initialize Supabase
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    
     // Pagination
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -44,12 +50,6 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || 'company'; // 'company', 'individual'
     const search = searchParams.get('search'); // Search by name or document
     const minDays = searchParams.get('minDays'); // Minimum days since approval
-    
-    // Initialize Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
     
     // Build query
     let query = supabase
