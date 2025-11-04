@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { getApplicantByDocument } from '@/lib/supabase-db';
 
 const SUMSUB_APP_TOKEN = process.env.NEXT_PUBLIC_SUMSUB_APP_TOKEN!;
 const SUMSUB_SECRET_KEY = process.env.SUMSUB_SECRET_KEY!;
@@ -34,13 +35,42 @@ function generateSignature(
 export async function POST(request: NextRequest) {
   try {
     const body: AccessTokenRequest = await request.json();
-    const { userId, levelName, ttlInSecs = 600 } = body;
+    let { userId, levelName, ttlInSecs = 600 } = body;
+    const { document } = body as any; // Documento (CPF/CNPJ) opcional
 
-    if (!userId || !levelName) {
+    if (!userId && !document) {
       return NextResponse.json(
-        { error: 'userId and levelName are required' },
+        { error: 'userId or document is required' },
         { status: 400 }
       );
+    }
+
+    if (!levelName) {
+      return NextResponse.json(
+        { error: 'levelName is required' },
+        { status: 400 }
+      );
+    }
+
+    // Se não tem userId mas tem documento, buscar no banco
+    if (!userId && document) {
+      console.log('[Access Token] Buscando applicant por documento:', document);
+      const existingApplicant = await getApplicantByDocument(document);
+      
+      if (existingApplicant) {
+        console.log('[Access Token] Applicant existente encontrado:', {
+          externalUserId: existingApplicant.external_user_id,
+          companyName: existingApplicant.company_name,
+        });
+        userId = existingApplicant.external_user_id;
+      } else {
+        // Se não encontrou, criar novo userId baseado no documento
+        const cleanDocument = document.replace(/\D/g, '');
+        userId = cleanDocument.length === 11 
+          ? `cpf_${cleanDocument}` 
+          : `cnpj_${cleanDocument}`;
+        console.log('[Access Token] Novo userId gerado:', userId);
+      }
     }
 
     // Preparar requisição para API do Sumsub

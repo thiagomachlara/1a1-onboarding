@@ -1,60 +1,139 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getApplicantByApplicantId } from '@/lib/supabase-db';
 import { resetQuestionnaireForRefresh } from '@/lib/sumsub-api';
+import { generateRefreshToken } from '@/lib/jwt-utils';
+import { sendWebhookNotification } from '@/lib/webhook-sender';
 import { createClient } from '@/lib/supabase/server';
 
 /**
  * POST /api/kyb/refresh
  * 
  * Reseta o questionnaire de uma empresa para refresh de dados financeiros
+ * Gera link com token e envia notificação via webhook
  * 
  * Body: { applicantId: string }
  */
 export async function POST(request: NextRequest) {
   try {
-    const { applicantId } = await request.json();
-    
+    const body = await request.json();
+    const { applicantId } = body;
+
     if (!applicantId) {
       return NextResponse.json(
-        { error: 'applicantId é obrigatório' },
+        { success: false, error: 'applicantId é obrigatório' },
         { status: 400 }
       );
     }
-    
-    console.log(`[KYB Refresh] Iniciando refresh para applicant: ${applicantId}`);
-    
-    // 1. Resetar questionnaire no Sumsub
-    const result = await resetQuestionnaireForRefresh(applicantId);
-    
-    // 2. Atualizar status no Supabase
+
+    console.log('[Refresh] Iniciando refresh para applicant:', applicantId);
+
+    // 1. Buscar dados do applicant no banco
+    const applicant = await getApplicantByApplicantId(applicantId);
+
+    if (!applicant) {
+      return NextResponse.json(
+        { success: false, error: 'Applicant não encontrado' },
+        { status: 404 }
+      );
+    }
+
+    console.log('[Refresh] Applicant encontrado:', {
+      companyName: applicant.company_name,
+      externalUserId: applicant.external_user_id,
+    });
+
+    // 2. Gerar token JWT (válido por 7 dias)
+    const token = generateRefreshToken({
+      applicantId: applicant.applicant_id,
+      externalUserId: applicant.external_user_id,
+      companyName: applicant.company_name,
+      document: applicant.document,
+    });
+
+    // 3. Criar link completo
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://onboarding.1a1cripto.com';
+    const refreshLink = `${baseUrl}/refresh?token=${token}`;
+
+    // 4. Calcular data de expiração
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    console.log('[Refresh] Link gerado:', refreshLink);
+
+    // 5. Resetar questionário no Sumsub
+    try {
+      await resetQuestionnaireForRefresh(
+        applicant.applicant_id,
+        'kyb-onboarding-completo'
+      );
+      console.log('[Refresh] Questionário resetado no Sumsub');
+    } catch (error) {
+      console.error('[Refresh] Erro ao resetar questionário:', error);
+      return NextResponse.json(
+        { success: false, error: 'Erro ao resetar questionário no Sumsub' },
+        { status: 500 }
+      );
+    }
+
+    // 6. Calcular dias desde aprovação
+    const daysSinceApproval = applicant.approved_at 
+      ? Math.floor((Date.now() - new Date(applicant.approved_at).getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    // 7. Enviar notificação pro webhook Lovable
+    const webhookPayload = {
+      event: 'kyc_refresh_requested',
+      timestamp: new Date().toISOString(),
+      applicant: {
+        id: applicant.applicant_id,
+        externalUserId: applicant.external_user_id,
+        companyName: applicant.company_name,
+        document: applicant.document,
+        email: applicant.email,
+      },
+      refresh: {
+        link: refreshLink,
+        expiresAt: expiresAt.toISOString(),
+        requestedBy: 'compliance',
+        daysSinceApproval,
+      },
+      message: `🔄 Atualização de KYC solicitada para ${applicant.company_name}`,
+    };
+
+    try {
+      await sendWebhookNotification(webhookPayload);
+      console.log('[Refresh] Webhook enviado com sucesso');
+    } catch (error) {
+      console.error('[Refresh] Erro ao enviar webhook:', error);
+      // Não falha a requisição se webhook falhar
+    }
+
+    // 8. Atualizar banco de dados
     const supabase = createClient();
     const { error: updateError } = await supabase
       .from('applicants')
       .update({
         refresh_requested_at: new Date().toISOString(),
-        refresh_status: 'pending'
+        refresh_status: 'pending',
+        updated_at: new Date().toISOString(),
       })
-      .eq('sumsub_applicant_id', applicantId);
-    
+      .eq('applicant_id', applicantId);
+
     if (updateError) {
-      console.error('[KYB Refresh] Erro ao atualizar Supabase:', updateError);
-      // Não falhar a request se Supabase der erro
+      console.error('[Refresh] Erro ao atualizar banco:', updateError);
     }
-    
-    console.log('[KYB Refresh] Refresh solicitado com sucesso');
-    
+
     return NextResponse.json({
       success: true,
-      message: 'Refresh solicitado com sucesso. A empresa receberá notificação para atualizar os dados.',
-      data: result
+      message: 'Refresh solicitado com sucesso',
+      link: refreshLink,
+      expiresAt: expiresAt.toISOString(),
     });
-    
+
   } catch (error: any) {
-    console.error('[KYB Refresh] Erro:', error);
+    console.error('[Refresh] Erro:', error);
     return NextResponse.json(
-      { 
-        error: 'Falha ao solicitar refresh',
-        details: error.message 
-      },
+      { success: false, error: 'Erro interno do servidor' },
       { status: 500 }
     );
   }
@@ -73,8 +152,8 @@ export async function GET(request: NextRequest) {
     const { data: applicants, error } = await supabase
       .from('applicants')
       .select('*')
-      .eq('verification_type', 'company')
-      .eq('review_status', 'approved')
+      .eq('applicant_type', 'company')
+      .eq('current_status', 'approved')
       .order('approved_at', { ascending: true });
     
     if (error) {
@@ -137,4 +216,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

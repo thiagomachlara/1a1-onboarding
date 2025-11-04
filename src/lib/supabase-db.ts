@@ -743,3 +743,51 @@ export async function getApplicantsByDateRange(startDate: string, endDate: strin
   }
 }
 
+/**
+ * Busca applicant por applicant_id (ID do Sumsub)
+ */
+export async function getApplicantByApplicantId(applicantId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('applicants')
+      .select('*')
+      .eq('applicant_id', applicantId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error getting applicant by applicant_id:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getApplicantByApplicantId:', error);
+    throw error;
+  }
+}
+
+/**
+ * Busca applicant por documento (CPF/CNPJ)
+ */
+export async function getApplicantByDocument(document: string) {
+  try {
+    // Remover formatação do documento
+    const cleanDocument = document.replace(/\D/g, '');
+
+    const { data, error } = await supabase
+      .from('applicants')
+      .select('*')
+      .eq('document', cleanDocument)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error getting applicant by document:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getApplicantByDocument:', error);
+    return null; // Retorna null se não encontrar (não é erro)
+  }
+}
