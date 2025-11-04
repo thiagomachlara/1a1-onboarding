@@ -12,6 +12,33 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = (page - 1) * limit;
     
+    // Check if searching by applicantId (single applicant lookup)
+    const applicantId = searchParams.get('applicantId');
+    
+    if (applicantId) {
+      // Direct lookup by applicant_id
+      const { data: applicant, error } = await supabase
+        .from('applicants')
+        .select('*')
+        .eq('applicant_id', applicantId)
+        .single();
+      
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return NextResponse.json(
+            { error: 'Applicant não encontrado' },
+            { status: 404 }
+          );
+        }
+        throw error;
+      }
+      
+      return NextResponse.json({
+        success: true,
+        applicants: [applicant]
+      });
+    }
+    
     // Filters
     const status = searchParams.get('status'); // 'GREEN', 'RED'
     const type = searchParams.get('type') || 'company'; // 'company', 'individual'
