@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     console.log(`[DEBUG] Buscando dados RAW para applicantId: ${applicantId}`);
 
     // Buscar dados completos do Sumsub
-    const data = await getApplicantData(applicantId);
+    const data = await getApplicantData(applicantId) as any;
 
     // Estrutura completa para análise
     const debug = {
