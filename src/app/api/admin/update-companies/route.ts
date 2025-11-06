@@ -17,6 +17,24 @@ interface Applicant {
   ubo_name?: string;
 }
 
+/**
+ * Limpa email removendo textos estranhos do OCR
+ */
+function cleanEmail(email: string | undefined | null): string | null {
+  if (!email) return null;
+  
+  // Remove "Profile", "image", "Profile image" e variações
+  // Também remove espaços extras e trim
+  const cleaned = email
+    .replace(/Profile\s*image/gi, '')
+    .replace(/Profile/gi, '')
+    .replace(/image/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  return cleaned || null;
+}
+
 export async function POST(request: Request) {
   try {
     const results = {
@@ -46,12 +64,15 @@ export async function POST(request: Request) {
       });
     }
 
+    console.log(`[UPDATE-COMPANIES] Processando ${applicants.length} empresas...`);
+
     // Para cada empresa, buscar dados do Sumsub e atualizar
     for (const applicant of applicants as Applicant[]) {
       try {
         const detail: any = {
           company: applicant.company_name || applicant.id,
           applicant_id: applicant.applicant_id,
+          uuid: applicant.id,
           changes: [],
         };
 
@@ -74,17 +95,26 @@ export async function POST(request: Request) {
         }
 
         // Email (limpar "Profile image" e outros problemas)
-        if (sumsubData.email) {
-          const cleanEmail = sumsubData.email.replace(/Profile image/gi, '').trim();
-          if (cleanEmail !== applicant.email) {
-            updates.email = cleanEmail;
-            detail.changes.push({
-              field: 'Email',
-              from: applicant.email || 'N/A',
-              to: cleanEmail,
-            });
-            hasChanges = true;
-          }
+        const cleanedEmail = cleanEmail(sumsubData.email);
+        const currentEmail = applicant.email;
+        
+        // Log para debug
+        console.log(`[EMAIL-CHECK] ${applicant.company_name}:`);
+        console.log(`  - Sumsub raw: "${sumsubData.email}"`);
+        console.log(`  - Sumsub cleaned: "${cleanedEmail}"`);
+        console.log(`  - Current DB: "${currentEmail}"`);
+        
+        if (cleanedEmail && cleanedEmail !== currentEmail) {
+          updates.email = cleanedEmail;
+          detail.changes.push({
+            field: 'Email',
+            from: currentEmail || 'N/A',
+            to: cleanedEmail,
+          });
+          hasChanges = true;
+          console.log(`  - ✓ Will update email`);
+        } else {
+          console.log(`  - ✗ No email change needed`);
         }
 
         // Nome da empresa
@@ -122,17 +152,32 @@ export async function POST(request: Request) {
 
         // Atualizar no banco se houver mudanças
         if (hasChanges) {
-          const { error: updateError } = await supabase
+          console.log(`[UPDATE] Atualizando ${applicant.company_name} (id: ${applicant.id})...`);
+          console.log(`[UPDATE] Changes:`, updates);
+          
+          const { data: updateData, error: updateError, count } = await supabase
             .from('applicants')
             .update(updates)
-            .eq('id', applicant.id);
+            .eq('id', applicant.id)
+            .select();
 
           if (updateError) {
             throw new Error(`Erro ao atualizar: ${updateError.message}`);
           }
 
-          results.updated++;
-          detail.status = 'updated';
+          // Verificar se realmente atualizou
+          const rowsAffected = updateData?.length || 0;
+          console.log(`[UPDATE] Rows affected: ${rowsAffected}`);
+          
+          if (rowsAffected === 0) {
+            console.warn(`[UPDATE] ⚠️ WARNING: UPDATE returned 0 rows for id ${applicant.id}`);
+            detail.status = 'warning';
+            detail.warning = 'UPDATE não afetou nenhuma linha';
+            results.errors++;
+          } else {
+            results.updated++;
+            detail.status = 'updated';
+          }
         } else {
           results.skipped++;
           detail.status = 'skipped';
@@ -144,15 +189,19 @@ export async function POST(request: Request) {
         await new Promise(resolve => setTimeout(resolve, 500));
 
       } catch (error: any) {
+        console.error(`[ERROR] Erro ao processar ${applicant.company_name}:`, error);
         results.errors++;
         results.details.push({
           company: applicant.company_name || applicant.id,
           applicant_id: applicant.applicant_id,
+          uuid: applicant.id,
           status: 'error',
           error: error.message,
         });
       }
     }
+
+    console.log(`[UPDATE-COMPANIES] Concluído: ${results.updated} atualizadas, ${results.skipped} sem mudanças, ${results.errors} erros`);
 
     return NextResponse.json({
       success: true,
@@ -161,7 +210,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error updating companies:', error);
+    console.error('[UPDATE-COMPANIES] Error:', error);
     return NextResponse.json(
       { error: 'Erro ao atualizar empresas', details: error.message },
       { status: 500 }
