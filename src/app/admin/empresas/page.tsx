@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { createClient } from '@/lib/supabase/client';
 
@@ -22,6 +23,7 @@ interface Applicant {
 }
 
 export default function EmpresasPage() {
+  const router = useRouter();
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [filteredApplicants, setFilteredApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -251,9 +253,12 @@ export default function EmpresasPage() {
                     <tr key={applicant.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <div className="max-w-xs">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                          <button
+                            onClick={() => router.push(`/admin/empresas/${applicant.id}`)}
+                            className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline truncate text-left"
+                          >
                             {applicant.company_name || applicant.full_name}
-                          </p>
+                          </button>
                           <p className="text-xs text-gray-500 truncate">{applicant.email}</p>
                           <p className="text-xs text-gray-400">{applicant.document_number || '-'}</p>
                         </div>
@@ -290,6 +295,13 @@ export default function EmpresasPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-center space-x-1">
+                          <button
+                            onClick={() => router.push(`/admin/empresas/${applicant.id}`)}
+                            className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                            title="Ver dossiê completo"
+                          >
+                            Ver Dossiê
+                          </button>
                           <button
                             onClick={() => handleAction('contract', applicant)}
                             className="p-2 text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
