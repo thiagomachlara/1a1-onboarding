@@ -260,7 +260,9 @@ export async function POST(request: Request) {
 
         // Sincronizar UBOs na tabela beneficial_owners
         // UBOs estão em fixedInfo.companyInfo.beneficiaries
+        console.log('[UBO-DEBUG] fixedCompanyInfo:', JSON.stringify(fixedCompanyInfo, null, 2));
         const beneficiaries = fixedCompanyInfo.beneficiaries || [];
+        console.log(`[UBO-DEBUG] beneficiaries.length: ${beneficiaries.length}`);
         if (beneficiaries.length > 0) {
           console.log(`[UBO-SYNC] Sincronizando ${beneficiaries.length} UBOs...`);
           
