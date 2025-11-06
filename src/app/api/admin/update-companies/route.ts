@@ -108,12 +108,9 @@ export async function POST(request: Request) {
           changes: [],
         };
 
-        // Buscar dados completos do Sumsub
-        const path = `/resources/applicants/${applicant.applicant_id}`;
-        const responseData = await sumsubRequest('GET', path);
-        
-        // A API retorna um array dentro de 'list.items'
-        const data = responseData.list?.items?.[0] || responseData;
+        // Buscar dados completos do Sumsub usando /one
+        const path = `/resources/applicants/${applicant.applicant_id}/one`;
+        const data = await sumsubRequest('GET', path);
         
         console.log(`[SYNC-DEBUG] ${applicant.company_name} - hasInfo: ${!!data.info}, hasRequiredIdDocs: ${!!data.requiredIdDocs}`);
 
@@ -123,6 +120,7 @@ export async function POST(request: Request) {
 
         // Extrair dados da empresa
         const companyInfo = data.info?.companyInfo || {};
+        const fixedCompanyInfo = data.fixedInfo?.companyInfo || {};
         
         // CNPJ
         const cnpj = companyInfo.registrationNumber;
@@ -261,34 +259,37 @@ export async function POST(request: Request) {
         }
 
         // Sincronizar UBOs na tabela beneficial_owners
-        if (companyInfo.beneficialOwners && companyInfo.beneficialOwners.length > 0) {
-          console.log(`[UBO-SYNC] Sincronizando ${companyInfo.beneficialOwners.length} UBOs...`);
+        // UBOs estão em fixedInfo.companyInfo.beneficiaries
+        const beneficiaries = fixedCompanyInfo.beneficiaries || [];
+        if (beneficiaries.length > 0) {
+          console.log(`[UBO-SYNC] Sincronizando ${beneficiaries.length} UBOs...`);
           
-          for (const ubo of companyInfo.beneficialOwners) {
+          for (const beneficiary of beneficiaries) {
+            const ubo = beneficiary.beneficiaryInfo || {};
             // Verificar se UBO já existe
             const { data: existingUBO } = await supabase
               .from('beneficial_owners')
               .select('id')
               .eq('company_id', applicant.id)
-              .eq('applicant_id', ubo.applicantId)
+              .eq('applicant_id', beneficiary.applicantId)
               .single();
 
             const uboData = {
               company_id: applicant.id,
-              applicant_id: ubo.applicantId,
+              applicant_id: beneficiary.applicantId,
               first_name: ubo.firstName,
               middle_name: ubo.middleName,
               last_name: ubo.lastName,
               tin: ubo.tin,
-              dob: ubo.dateOfBirth,
+              dob: ubo.dob,
               nationality: ubo.nationality,
               email: ubo.email,
               phone: ubo.phone,
-              share_size: ubo.shareSize,
-              types: ubo.type ? [ubo.type] : null,
-              relation: ubo.positions?.[0] || null,
-              submitted: ubo.applicantId ? true : false,
-              verification_status: ubo.applicantId ? 'pending' : 'not_submitted',
+              share_size: beneficiary.shareSize || ubo.shareSize,
+              types: beneficiary.types || null,
+              relation: null,
+              submitted: beneficiary.submitted || false,
+              verification_status: beneficiary.submitted ? 'pending' : 'not_submitted',
             };
 
             if (existingUBO) {
