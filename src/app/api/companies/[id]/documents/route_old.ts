@@ -50,7 +50,7 @@ async function sumsubRequest(method: string, path: string) {
 /**
  * GET /api/companies/[id]/documents
  * 
- * Lista todos os documentos de uma empresa do Sumsub usando o endpoint correto
+ * Lista todos os documentos de uma empresa do Sumsub
  */
 export async function GET(
   request: Request,
@@ -80,38 +80,36 @@ export async function GET(
       );
     }
 
-    // Buscar dados básicos para obter inspectionId
-    const applicantPath = `/resources/applicants/${company.applicant_id}/one`;
-    const applicantData = await sumsubRequest('GET', applicantPath);
-    const inspectionId = applicantData.inspectionId;
-
-    // Buscar documentos usando endpoint correto
-    const docsPath = `/resources/applicants/${company.applicant_id}/metadata/resources`;
-    const docsData = await sumsubRequest('GET', docsPath);
+    // Buscar documentos do Sumsub
+    const path = `/resources/applicants/${company.applicant_id}/one`;
+    const data = await sumsubRequest('GET', path);
 
     // Extrair documentos
     const documents: any[] = [];
     
-    if (docsData.items && Array.isArray(docsData.items)) {
-      for (const item of docsData.items) {
-        documents.push({
-          image_id: item.id,
-          preview_id: item.previewId,
-          inspection_id: inspectionId,
-          file_name: item.fileMetadata?.fileName || 'documento.pdf',
-          file_type: item.fileMetadata?.fileType || 'unknown',
-          file_size: item.fileMetadata?.fileSize || 0,
-          doc_type: item.idDocDef?.idDocType || 'UNKNOWN',
-          doc_sub_type: item.idDocDef?.idDocSubType || null,
-          country: item.idDocDef?.country || null,
-          added_date: item.addedDate,
-          review_answer: item.reviewResult?.reviewAnswer || 'pending',
-          reject_labels: item.reviewResult?.rejectLabels || [],
-          review_reject_type: item.reviewResult?.reviewRejectType || null,
-          moderator_comment: item.reviewResult?.moderationComment || null,
-          source: item.source || 'fileupload',
-          deactivated: item.deactivated || false,
-        });
+    if (data.requiredIdDocs?.docSets) {
+      for (const docSet of data.requiredIdDocs.docSets) {
+        const docSetType = docSet.idDocSetType;
+        
+        if (docSet.types) {
+          for (const docType of docSet.types) {
+            const idDocType = docType.idDocType;
+            
+            if (docType.imageIds) {
+              for (const imageId of docType.imageIds) {
+                documents.push({
+                  doc_set_type: docSetType,
+                  doc_type: idDocType,
+                  image_id: imageId,
+                  inspection_id: data.inspectionId,
+                  status: docType.reviewStatus || 'pending',
+                  review_answer: docType.reviewAnswer,
+                  review_comment: docType.reviewComment,
+                });
+              }
+            }
+          }
+        }
       }
     }
 
