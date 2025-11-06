@@ -178,63 +178,26 @@ export async function POST(request: Request) {
           hasChanges = true;
         }
 
-        // Endereço completo - sempre atualizar se vier do Sumsub
-        const legalAddress = companyInfo.legalAddress || {};
-        
-        // Endereço (rua, número)
-        const address = [legalAddress.street, legalAddress.buildingNumber]
-          .filter(Boolean)
-          .join(', ');
-        if (address && address !== applicant.address) {
-          updates.address = address;
+        // Endereço completo - usar postalAddress que vem como string única
+        const postalAddress = companyInfo.postalAddress;
+        if (postalAddress && postalAddress !== applicant.address) {
+          updates.address = postalAddress;
           detail.changes.push({
             field: 'Endereço',
             from: applicant.address || 'N/A',
-            to: address,
+            to: postalAddress,
           });
           hasChanges = true;
         }
 
-        // Cidade
-        if (legalAddress.town && legalAddress.town !== applicant.city) {
-          updates.city = legalAddress.town;
-          detail.changes.push({
-            field: 'Cidade',
-            from: applicant.city || 'N/A',
-            to: legalAddress.town,
-          });
-          hasChanges = true;
-        }
-
-        // Estado
-        if (legalAddress.state && legalAddress.state !== applicant.state) {
-          updates.state = legalAddress.state;
-          detail.changes.push({
-            field: 'Estado',
-            from: applicant.state || 'N/A',
-            to: legalAddress.state,
-          });
-          hasChanges = true;
-        }
-
-        // CEP
-        if (legalAddress.postCode && legalAddress.postCode !== applicant.postal_code) {
-          updates.postal_code = legalAddress.postCode;
-          detail.changes.push({
-            field: 'CEP',
-            from: applicant.postal_code || 'N/A',
-            to: legalAddress.postCode,
-          });
-          hasChanges = true;
-        }
-
-        // País
-        if (legalAddress.country && legalAddress.country !== applicant.country) {
-          updates.country = legalAddress.country;
+        // País (único campo separado disponível)
+        const country = companyInfo.country || fixedCompanyInfo.country;
+        if (country && country !== applicant.country) {
+          updates.country = country;
           detail.changes.push({
             field: 'País',
             from: applicant.country || 'N/A',
-            to: legalAddress.country,
+            to: country,
           });
           hasChanges = true;
         }
@@ -260,9 +223,7 @@ export async function POST(request: Request) {
 
         // Sincronizar UBOs na tabela beneficial_owners
         // UBOs estão em fixedInfo.companyInfo.beneficiaries
-        console.log('[UBO-DEBUG] fixedCompanyInfo:', JSON.stringify(fixedCompanyInfo, null, 2));
         const beneficiaries = fixedCompanyInfo.beneficiaries || [];
-        console.log(`[UBO-DEBUG] beneficiaries.length: ${beneficiaries.length}`);
         if (beneficiaries.length > 0) {
           console.log(`[UBO-SYNC] Sincronizando ${beneficiaries.length} UBOs...`);
           
