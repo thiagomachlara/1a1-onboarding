@@ -162,7 +162,16 @@ export async function getApplicantData(applicantId: string): Promise<SumsubAppli
       result.country = companyInfo.country;
       
       // Email e telefone (pode estar em info ou companyInfo)
-      result.email = data.info?.email || companyInfo.email;
+      // Priorizar email verificado e limpar texto estranho do OCR
+      const rawEmail = data.info?.email || companyInfo.email;
+      if (rawEmail) {
+        // Limpar "Profile", "image", "Profile image" e outros textos estranhos
+        result.email = rawEmail
+          .replace(/Profile\s*image/gi, '')
+          .replace(/Profile/gi, '')
+          .replace(/image/gi, '')
+          .trim();
+      }
       result.phone = data.info?.phone || companyInfo.phone;
       
       // UBO (Ultimate Beneficial Owner) - buscar primeiro UBO se disponível
