@@ -54,10 +54,10 @@ async function sumsubRequest(method: string, path: string) {
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Buscar empresa no banco com todos os dados
     const { data: company, error: companyError } = await supabase
