@@ -42,20 +42,34 @@ interface CompanyDossier {
   sumsub_data: any;
 }
 
+interface Document {
+  doc_set_type: string;
+  doc_type: string;
+  image_id: string;
+  inspection_id: string;
+  status: string;
+  review_answer?: string;
+  review_comment?: string;
+}
+
 export default function CompanyDossierPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
   const [dossier, setDossier] = useState<CompanyDossier | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState('cadastro');
+  const [newNote, setNewNote] = useState('');
+  const [addingNote, setAddingNote] = useState(false);
 
   useEffect(() => {
     if (id) {
       loadDossier();
+      loadDocuments();
     }
   }, [id]);
 
@@ -80,6 +94,19 @@ export default function CompanyDossierPage() {
     }
   };
 
+  const loadDocuments = async () => {
+    try {
+      const response = await fetch(`/api/companies/${id}/documents`);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setDocuments(data.documents || []);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar documentos:', err);
+    }
+  };
+
   const handleSync = async () => {
     try {
       setSyncing(true);
@@ -89,11 +116,46 @@ export default function CompanyDossierPage() {
       
       if (response.ok) {
         await loadDossier();
+        await loadDocuments();
       }
     } catch (err) {
       console.error('Erro ao sincronizar:', err);
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleDownloadDocument = (imageId: string, inspectionId: string) => {
+    window.open(`/api/documents/download?imageId=${imageId}&inspectionId=${inspectionId}`, '_blank');
+  };
+
+  const handleDownloadSummaryReport = async () => {
+    if (!dossier?.company.applicant_id) return;
+    
+    try {
+      const response = await fetch('/api/sumsub/summary-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicantId: dossier.company.applicant_id,
+          type: 'company',
+        }),
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${dossier.company.company_name}_summary_report.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (err) {
+      console.error('Erro ao baixar summary report:', err);
+      alert('Erro ao baixar relatório');
     }
   };
 
@@ -113,6 +175,28 @@ export default function CompanyDossierPage() {
       case 'high': return 'Alto';
       default: return 'N/A';
     }
+  };
+
+  const getDocTypeLabel = (docType: string) => {
+    const labels: Record<string, string> = {
+      'COMPANY_DOC': 'Documento da Empresa',
+      'ARTICLES': 'Contrato Social',
+      'SHAREHOLDER_REGISTRY': 'Registro de Acionistas',
+      'COMPANY_POA': 'Procuração',
+      'CERTIFICATE': 'Certificado',
+      'QUESTIONNAIRE': 'Questionário',
+    };
+    return labels[docType] || docType;
+  };
+
+  const getStatusBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      'GREEN': 'bg-green-100 text-green-800',
+      'RED': 'bg-red-100 text-red-800',
+      'YELLOW': 'bg-yellow-100 text-yellow-800',
+      'pending': 'bg-gray-100 text-gray-800',
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
   if (loading) {
@@ -154,12 +238,12 @@ export default function CompanyDossierPage() {
 
   const tabs = [
     { id: 'cadastro', name: 'Cadastro', icon: '🏢' },
-    { id: 'ubos', name: 'UBOs', icon: '👥' },
-    { id: 'documentos', name: 'Documentos', icon: '📄' },
+    { id: 'ubos', name: 'UBOs', icon: '👥', count: dossier.ubos.length },
+    { id: 'documentos', name: 'Documentos', icon: '📄', count: documents.length },
     { id: 'risco', name: 'Risco', icon: '⚠️' },
     { id: 'blockchain', name: 'Blockchain', icon: '💼' },
-    { id: 'notas', name: 'Notas', icon: '📝' },
-    { id: 'auditoria', name: 'Auditoria', icon: '📊' },
+    { id: 'notas', name: 'Notas', icon: '📝', count: dossier.notes.length },
+    { id: 'auditoria', name: 'Auditoria', icon: '📊', count: dossier.audit_logs.length },
   ];
 
   return (
@@ -171,12 +255,12 @@ export default function CompanyDossierPage() {
         <div className="mb-6">
           <button 
             onClick={() => router.back()}
-            className="mb-4 text-blue-600 hover:text-blue-800"
+            className="mb-4 text-blue-600 hover:text-blue-800 font-medium"
           >
             ← Voltar para lista
           </button>
 
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 {dossier.company.company_name}
@@ -194,16 +278,19 @@ export default function CompanyDossierPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button 
                 onClick={handleSync} 
                 disabled={syncing}
-                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
               >
                 {syncing ? '🔄 Sincronizando...' : '🔄 Sincronizar'}
               </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                📥 Gerar PDF
+              <button 
+                onClick={handleDownloadSummaryReport}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                📥 Summary Report
               </button>
             </div>
           </div>
@@ -224,6 +311,11 @@ export default function CompanyDossierPage() {
                   }`}
                 >
                   {tab.icon} {tab.name}
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span className="ml-2 px-2 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
+                      {tab.count}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -289,9 +381,9 @@ export default function CompanyDossierPage() {
                       : 'Nunca'}
                   </p>
                 </div>
-                <div>
+                <div className="md:col-span-2">
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Applicant ID (Sumsub)</h3>
-                  <p className="text-sm font-mono text-gray-600">{dossier.company.applicant_id || 'N/A'}</p>
+                  <p className="text-sm font-mono text-gray-600 break-all">{dossier.company.applicant_id || 'N/A'}</p>
                 </div>
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Data de Cadastro</h3>
@@ -310,13 +402,39 @@ export default function CompanyDossierPage() {
               <p className="text-gray-600 mb-6">{dossier.ubos.length} sócio(s) encontrado(s)</p>
               
               {dossier.ubos.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Nenhum UBO encontrado</p>
+                <div className="text-center py-12">
+                  <div className="text-gray-400 text-5xl mb-4">👥</div>
+                  <p className="text-gray-500">Nenhum UBO encontrado</p>
+                  <p className="text-sm text-gray-400 mt-2">Execute a sincronização para buscar dados do Sumsub</p>
+                </div>
               ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {dossier.ubos.map((ubo, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <p className="font-medium">{ubo.first_name} {ubo.last_name}</p>
-                      <p className="text-sm text-gray-600">Participação: {ubo.share_size}%</p>
+                    <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="font-medium text-lg">{ubo.first_name} {ubo.last_name}</p>
+                          {ubo.tin && <p className="text-sm text-gray-600">CPF: {ubo.tin}</p>}
+                        </div>
+                        {ubo.share_size && (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
+                            {ubo.share_size}%
+                          </span>
+                        )}
+                      </div>
+                      {ubo.email && (
+                        <p className="text-sm text-gray-600">📧 {ubo.email}</p>
+                      )}
+                      {ubo.relation && (
+                        <p className="text-sm text-gray-600 mt-1">💼 {ubo.relation}</p>
+                      )}
+                      {ubo.verification_status && (
+                        <span className={`inline-block mt-2 px-2 py-1 text-xs rounded ${
+                          ubo.verification_status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {ubo.verification_status}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -327,9 +445,48 @@ export default function CompanyDossierPage() {
           {/* Aba Documentos */}
           {activeTab === 'documentos' && (
             <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Documentos</h2>
-              <p className="text-gray-600 mb-6">{dossier.documents.length} documento(s) encontrado(s)</p>
-              <p className="text-gray-500 text-center py-8">Em desenvolvimento...</p>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">Documentos</h2>
+                  <p className="text-gray-600">{documents.length} documento(s) encontrado(s)</p>
+                </div>
+                <button
+                  onClick={handleDownloadSummaryReport}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  📥 Download Summary Report
+                </button>
+              </div>
+              
+              {documents.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 text-5xl mb-4">📄</div>
+                  <p className="text-gray-500">Nenhum documento encontrado</p>
+                  <p className="text-sm text-gray-400 mt-2">Execute a sincronização para buscar documentos do Sumsub</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {documents.map((doc, index) => (
+                    <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{getDocTypeLabel(doc.doc_type)}</p>
+                          <p className="text-xs text-gray-500 mt-1">{doc.doc_set_type}</p>
+                        </div>
+                        <span className={`px-2 py-1 text-xs rounded ${getStatusBadge(doc.status)}`}>
+                          {doc.status}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleDownloadDocument(doc.image_id, doc.inspection_id)}
+                        className="w-full mt-3 px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 transition-colors"
+                      >
+                        📥 Download
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -337,8 +494,54 @@ export default function CompanyDossierPage() {
           {activeTab === 'risco' && (
             <div className="p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-2">Análise de Risco</h2>
-              <p className="text-gray-600 mb-6">Score: {dossier.risk_assessment.risk_score}/100</p>
-              <p className="text-gray-500 text-center py-8">Em desenvolvimento...</p>
+              <p className="text-gray-600 mb-6">Avaliação de risco baseada em dados do Sumsub e análise manual</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <p className="text-sm text-gray-600 mb-2">Risk Score</p>
+                  <p className="text-4xl font-bold text-gray-900">{dossier.risk_assessment.risk_score}</p>
+                  <p className="text-sm text-gray-500 mt-1">de 100</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <p className="text-sm text-gray-600 mb-2">Risk Level</p>
+                  <span className={`inline-block px-4 py-2 text-lg font-bold rounded-full ${getRiskLevelColor(dossier.risk_assessment.risk_level)}`}>
+                    {getRiskLevelText(dossier.risk_assessment.risk_level)}
+                  </span>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                  <p className="text-sm text-gray-600 mb-2">Override Manual</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {dossier.risk_assessment.manual_risk_override ? '✅ Sim' : '❌ Não'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Fatores de Risco</h3>
+                {dossier.risk_assessment.risk_factors && dossier.risk_assessment.risk_factors.length > 0 ? (
+                  <div className="space-y-2">
+                    {dossier.risk_assessment.risk_factors.map((factor: any, index: number) => (
+                      <div key={index} className="border-l-4 border-yellow-500 bg-yellow-50 p-3 rounded">
+                        <p className="font-medium text-gray-900">{factor.description || factor.type}</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Peso: {factor.weight} | Valor: {factor.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-4">Nenhum fator de risco identificado</p>
+                )}
+              </div>
+
+              {dossier.risk_assessment.officer_notes && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Notas do Compliance Officer</h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-gray-700">{dossier.risk_assessment.officer_notes}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -346,19 +549,42 @@ export default function CompanyDossierPage() {
           {activeTab === 'blockchain' && (
             <div className="p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-2">Blockchain & Wallet</h2>
-              <div className="space-y-4 mt-6">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Endereço da Wallet</h3>
-                  <p className="text-base font-mono text-gray-900">
-                    {dossier.blockchain.wallet_address || 'Não cadastrado'}
+              <p className="text-gray-600 mb-6">Informações sobre wallet e whitelist</p>
+              
+              <div className="space-y-6">
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Endereço da Wallet</h3>
+                  <p className="text-lg font-mono text-gray-900 break-all">
+                    {dossier.blockchain.wallet_address || (
+                      <span className="text-gray-400 font-sans">Não cadastrado</span>
+                    )}
                   </p>
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Status Whitelist</h3>
-                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full">
+                
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Status Whitelist</h3>
+                  <span className={`inline-block px-4 py-2 rounded-full ${
+                    dossier.blockchain.whitelist_status === 'approved' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
                     {dossier.blockchain.whitelist_status || 'pending'}
                   </span>
                 </div>
+
+                {dossier.blockchain.whitelist_pdf_url && (
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">PDF Whitelist</h3>
+                    <a
+                      href={dossier.blockchain.whitelist_pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      📥 Download PDF Whitelist
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -367,8 +593,49 @@ export default function CompanyDossierPage() {
           {activeTab === 'notas' && (
             <div className="p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-2">Notas & Compliance</h2>
-              <p className="text-gray-600 mb-6">{dossier.notes.length} nota(s)</p>
-              <p className="text-gray-500 text-center py-8">Em desenvolvimento...</p>
+              <p className="text-gray-600 mb-6">{dossier.notes.length} nota(s) registrada(s)</p>
+              
+              <div className="mb-6 bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Adicionar Nova Nota</h3>
+                <textarea
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Digite sua nota aqui..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  rows={3}
+                />
+                <button
+                  onClick={() => {
+                    // TODO: Implementar salvamento de nota
+                    alert('Funcionalidade em desenvolvimento');
+                  }}
+                  disabled={!newNote.trim() || addingNote}
+                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {addingNote ? 'Salvando...' : '💾 Salvar Nota'}
+                </button>
+              </div>
+
+              {dossier.notes.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 text-5xl mb-4">📝</div>
+                  <p className="text-gray-500">Nenhuma nota registrada</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {dossier.notes.map((note: any, index: number) => (
+                    <div key={index} className="border rounded-lg p-4 bg-white">
+                      <div className="flex items-start justify-between mb-2">
+                        <p className="font-medium text-gray-900">{note.author || 'Compliance Officer'}</p>
+                        <p className="text-sm text-gray-500">
+                          {new Date(note.created_at).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                      <p className="text-gray-700">{note.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -376,8 +643,33 @@ export default function CompanyDossierPage() {
           {activeTab === 'auditoria' && (
             <div className="p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-2">Log de Auditoria</h2>
-              <p className="text-gray-600 mb-6">{dossier.audit_logs.length} evento(s)</p>
-              <p className="text-gray-500 text-center py-8">Em desenvolvimento...</p>
+              <p className="text-gray-600 mb-6">{dossier.audit_logs.length} evento(s) registrado(s)</p>
+              
+              {dossier.audit_logs.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 text-5xl mb-4">📊</div>
+                  <p className="text-gray-500">Nenhum evento de auditoria registrado</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {dossier.audit_logs.map((log: any, index: number) => (
+                    <div key={index} className="border-l-4 border-blue-500 bg-gray-50 p-4 rounded">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">{log.action}</p>
+                          <p className="text-sm text-gray-600 mt-1">{log.description}</p>
+                          {log.user_email && (
+                            <p className="text-xs text-gray-500 mt-1">Por: {log.user_email}</p>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 whitespace-nowrap ml-4">
+                          {new Date(log.created_at).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
