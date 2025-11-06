@@ -229,25 +229,19 @@ export default function EmpresasPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Empresa
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      CNPJ
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Aprovado
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contrato
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Wallet
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ações
                     </th>
                   </tr>
@@ -255,18 +249,16 @@ export default function EmpresasPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredApplicants.map((applicant) => (
                     <tr key={applicant.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
+                      <td className="px-4 py-3">
+                        <div className="max-w-xs">
+                          <p className="text-sm font-medium text-gray-900 truncate">
                             {applicant.company_name || applicant.full_name}
                           </p>
-                          <p className="text-sm text-gray-500">{applicant.email}</p>
+                          <p className="text-xs text-gray-500 truncate">{applicant.email}</p>
+                          <p className="text-xs text-gray-400">{applicant.document_number || '-'}</p>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {applicant.document_number || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3">
                         <div>
                           <p className="text-sm text-gray-900">{formatDate(applicant.approved_at)}</p>
                           <p className="text-xs text-gray-500">
@@ -274,47 +266,50 @@ export default function EmpresasPage() {
                           </p>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {applicant.contract_signed_at ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ Assinado
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            ✗ Não assinado
-                          </span>
-                        )}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col items-center space-y-1">
+                          {applicant.contract_signed_at ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                              ✓ Contrato
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                              ✗ Contrato
+                            </span>
+                          )}
+                          {applicant.wallet_token ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                              ✓ Wallet
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                              ✗ Wallet
+                            </span>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {applicant.wallet_token ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ Cadastrada
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            ✗ Não cadastrada
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex space-x-2">
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center space-x-1">
                           <button
                             onClick={() => handleAction('contract', applicant)}
-                            className="text-yellow-600 hover:text-yellow-900 font-medium"
+                            className="p-2 text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
+                            title="Gerar link de contrato"
                           >
-                            📝 Contrato
+                            📝
                           </button>
                           <button
                             onClick={() => handleAction('wallet', applicant)}
-                            className="text-blue-600 hover:text-blue-900 font-medium"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Gerar link de wallet"
                           >
-                            💼 Wallet
+                            💼
                           </button>
                           <button
                             onClick={() => handleAction('refresh', applicant)}
-                            className="text-green-600 hover:text-green-900 font-medium"
+                            className="p-2 text-green-600 hover:bg-green-50 rounded transition-colors"
+                            title="Solicitar refresh"
                           >
-                            🔄 Refresh
+                            🔄
                           </button>
                         </div>
                       </td>
