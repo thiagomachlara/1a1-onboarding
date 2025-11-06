@@ -181,6 +181,10 @@ export async function POST(request: Request) {
         // Endereço completo - usar postalAddress que vem como string única
         // SEMPRE atualizar se vier do Sumsub, mesmo que já exista
         const postalAddress = companyInfo.postalAddress;
+        console.log(`[ADDRESS-DEBUG] ${applicant.company_name}:`);
+        console.log(`  - postalAddress from Sumsub: "${postalAddress}"`);
+        console.log(`  - current address in DB: "${applicant.address}"`);
+        console.log(`  - companyInfo keys:`, Object.keys(companyInfo));
         if (postalAddress) {
           const currentAddress = applicant.address || '';
           if (postalAddress !== currentAddress) {
