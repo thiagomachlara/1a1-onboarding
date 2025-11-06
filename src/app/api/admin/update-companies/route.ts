@@ -179,15 +179,19 @@ export async function POST(request: Request) {
         }
 
         // Endereço completo - usar postalAddress que vem como string única
+        // SEMPRE atualizar se vier do Sumsub, mesmo que já exista
         const postalAddress = companyInfo.postalAddress;
-        if (postalAddress && postalAddress !== applicant.address) {
-          updates.address = postalAddress;
-          detail.changes.push({
-            field: 'Endereço',
-            from: applicant.address || 'N/A',
-            to: postalAddress,
-          });
-          hasChanges = true;
+        if (postalAddress) {
+          const currentAddress = applicant.address || '';
+          if (postalAddress !== currentAddress) {
+            updates.address = postalAddress;
+            detail.changes.push({
+              field: 'Endereço',
+              from: currentAddress || 'N/A',
+              to: postalAddress,
+            });
+            hasChanges = true;
+          }
         }
 
         // País (único campo separado disponível)
