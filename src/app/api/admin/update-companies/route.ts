@@ -109,8 +109,13 @@ export async function POST(request: Request) {
         };
 
         // Buscar dados completos do Sumsub
-        const path = `/resources/applicants/${applicant.applicant_id}/one`;
-        const data = await sumsubRequest('GET', path);
+        const path = `/resources/applicants/${applicant.applicant_id}`;
+        const responseData = await sumsubRequest('GET', path);
+        
+        // A API retorna um array dentro de 'list.items'
+        const data = responseData.list?.items?.[0] || responseData;
+        
+        console.log(`[SYNC-DEBUG] ${applicant.company_name} - hasInfo: ${!!data.info}, hasRequiredIdDocs: ${!!data.requiredIdDocs}`);
 
         // Preparar dados para atualização
         const updates: any = {};
