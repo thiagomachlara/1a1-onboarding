@@ -114,7 +114,7 @@ export interface SumsubApplicantData {
  */
 export async function getApplicantData(applicantId: string): Promise<SumsubApplicantData> {
   try {
-    const path = `/resources/applicants/${applicantId}/one`;
+    const path = `/resources/applicants/${applicantId}`;
     const data = await sumsubRequest('GET', path);
 
     // Extrair dados baseado no tipo
