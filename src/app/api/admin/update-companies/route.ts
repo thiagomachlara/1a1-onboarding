@@ -303,6 +303,56 @@ export async function POST(request: Request) {
           }
         }
 
+        // Sincronizar documentos na tabela documents
+        if (data.requiredIdDocs?.docSets) {
+          console.log(`[DOC-SYNC] Sincronizando documentos...`);
+          
+          for (const docSet of data.requiredIdDocs.docSets) {
+            if (docSet.imageReviewResults) {
+              for (const doc of docSet.imageReviewResults) {
+                // Verificar se documento já existe
+                const { data: existingDoc } = await supabase
+                  .from('documents')
+                  .select('id')
+                  .eq('company_id', applicant.id)
+                  .eq('image_id', doc.imageId)
+                  .single();
+
+                const docData = {
+                  company_id: applicant.id,
+                  applicant_id: applicant.applicant_id,
+                  inspection_id: data.inspectionId,
+                  image_id: doc.imageId,
+                  document_type: docSet.idDocSetType,
+                  document_sub_type: doc.idDocType,
+                  country: doc.country,
+                  review_status: doc.reviewResult?.reviewAnswer || 'pending',
+                  reject_labels: doc.reviewResult?.rejectLabels || null,
+                  review_reject_type: doc.reviewResult?.reviewRejectType || null,
+                  moderator_comment: doc.reviewResult?.moderatorComment || null,
+                  client_comment: doc.reviewResult?.clientComment || null,
+                  page_number: doc.pageNumber,
+                };
+
+                if (existingDoc) {
+                  // Atualizar documento existente
+                  await supabase
+                    .from('documents')
+                    .update(docData)
+                    .eq('id', existingDoc.id);
+                  console.log(`[DOC-SYNC] ✓ Documento atualizado: ${doc.idDocType}`);
+                } else {
+                  // Inserir novo documento
+                  await supabase
+                    .from('documents')
+                    .insert(docData);
+                  console.log(`[DOC-SYNC] ✓ Documento criado: ${doc.idDocType}`);
+                }
+              }
+            }
+          }
+        }
+
         // Atualizar no banco se houver mudanças
         if (hasChanges) {
           console.log(`[UPDATE] Atualizando ${applicant.company_name} (id: ${applicant.id})...`);
