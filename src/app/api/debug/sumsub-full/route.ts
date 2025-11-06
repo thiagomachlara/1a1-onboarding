@@ -1,7 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getApplicantData } from '@/lib/sumsub-api';
+import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
+
+const SUMSUB_APP_TOKEN = process.env.SUMSUB_APP_TOKEN!;
+const SUMSUB_SECRET_KEY = process.env.SUMSUB_SECRET_KEY!;
+const SUMSUB_BASE_URL = 'https://api.sumsub.com';
+
+function generateSignature(method: string, path: string, timestamp: number): string {
+  const data = timestamp + method.toUpperCase() + path;
+  return crypto
+    .createHmac('sha256', SUMSUB_SECRET_KEY)
+    .update(data)
+    .digest('hex');
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,15 +27,39 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log(`[DEBUG] Buscando dados RAW para applicantId: ${applicantId}`);
+    console.log(`[DEBUG] Buscando dados RAW DIRETO DA API para applicantId: ${applicantId}`);
 
-    // Buscar dados completos do Sumsub
-    const data = await getApplicantData(applicantId) as any;
+    // Chamar API do Sumsub DIRETAMENTE (sem /one)
+    const path = `/resources/applicants/${applicantId}`;
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = generateSignature('GET', path, timestamp);
+
+    const headers = {
+      'X-App-Token': SUMSUB_APP_TOKEN,
+      'X-App-Access-Sig': signature,
+      'X-App-Access-Ts': timestamp.toString(),
+      'Content-Type': 'application/json',
+    };
+
+    const response = await fetch(`${SUMSUB_BASE_URL}${path}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Sumsub API error: ${response.status} - ${error}`);
+    }
+
+    const data = await response.json();
+
+    console.log(`[DEBUG] Dados recebidos - type: ${data.type}, hasInfo: ${!!data.info}, hasRequiredIdDocs: ${!!data.requiredIdDocs}`);
 
     // Estrutura completa para análise
     const debug = {
       applicantId,
       timestamp: new Date().toISOString(),
+      endpoint: path,
       
       // Dados principais
       email_root: data.email || null,
