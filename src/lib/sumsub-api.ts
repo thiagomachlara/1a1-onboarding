@@ -115,7 +115,10 @@ export interface SumsubApplicantData {
 export async function getApplicantData(applicantId: string): Promise<SumsubApplicantData> {
   try {
     const path = `/resources/applicants/${applicantId}`;
-    const data = await sumsubRequest('GET', path);
+    const responseData = await sumsubRequest('GET', path);
+    
+    // A API retorna um array dentro de 'list'
+    const data = responseData.list && responseData.list.length > 0 ? responseData.list[0] : responseData;
 
     // Extrair dados baseado no tipo
     const type = data.type === 'company' ? 'company' : 'individual';

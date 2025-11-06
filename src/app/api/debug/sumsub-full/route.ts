@@ -51,7 +51,10 @@ export async function GET(request: NextRequest) {
       throw new Error(`Sumsub API error: ${response.status} - ${error}`);
     }
 
-    const data = await response.json();
+    const responseData = await response.json();
+    
+    // A API retorna um array dentro de 'list'
+    const data = responseData.list && responseData.list.length > 0 ? responseData.list[0] : responseData;
 
     console.log(`[DEBUG] Dados recebidos - type: ${data.type}, hasInfo: ${!!data.info}, hasRequiredIdDocs: ${!!data.requiredIdDocs}`);
 
