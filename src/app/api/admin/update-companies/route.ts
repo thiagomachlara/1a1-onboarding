@@ -170,6 +170,42 @@ export async function POST(request: Request) {
           hasChanges = true;
         }
 
+        // Endereço completo
+        const legalAddress = companyInfo.legalAddress || {};
+        
+        // Endereço (rua, número)
+        const address = [legalAddress.street, legalAddress.buildingNumber]
+          .filter(Boolean)
+          .join(', ');
+        if (address) {
+          updates.address = address;
+          hasChanges = true;
+        }
+
+        // Cidade
+        if (legalAddress.town) {
+          updates.city = legalAddress.town;
+          hasChanges = true;
+        }
+
+        // Estado
+        if (legalAddress.state) {
+          updates.state = legalAddress.state;
+          hasChanges = true;
+        }
+
+        // CEP
+        if (legalAddress.postCode) {
+          updates.postal_code = legalAddress.postCode;
+          hasChanges = true;
+        }
+
+        // País
+        if (legalAddress.country) {
+          updates.country = legalAddress.country;
+          hasChanges = true;
+        }
+
         // Nome do UBO
         let uboName = null;
         if (companyInfo.beneficialOwners && companyInfo.beneficialOwners.length > 0) {
