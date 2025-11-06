@@ -1,11 +1,56 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getApplicantData } from '@/lib/sumsub-api';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+const SUMSUB_APP_TOKEN = process.env.SUMSUB_APP_TOKEN!;
+const SUMSUB_SECRET_KEY = process.env.SUMSUB_SECRET_KEY!;
+const SUMSUB_BASE_URL = 'https://api.sumsub.com';
+
+import crypto from 'crypto';
+
+/**
+ * Gera assinatura HMAC SHA256 para autenticação na API Sumsub
+ */
+function generateSignature(method: string, path: string, timestamp: number, body?: string): string {
+  const data = timestamp + method.toUpperCase() + path + (body || '');
+  return crypto
+    .createHmac('sha256', SUMSUB_SECRET_KEY)
+    .update(data)
+    .digest('hex');
+}
+
+/**
+ * Faz requisição autenticada para a API Sumsub
+ */
+async function sumsubRequest(method: string, path: string, body?: any) {
+  const timestamp = Math.floor(Date.now() / 1000);
+  const bodyString = body ? JSON.stringify(body) : undefined;
+  const signature = generateSignature(method, path, timestamp, bodyString);
+
+  const headers: Record<string, string> = {
+    'X-App-Token': SUMSUB_APP_TOKEN,
+    'X-App-Access-Sig': signature,
+    'X-App-Access-Ts': timestamp.toString(),
+    'Content-Type': 'application/json',
+  };
+
+  const response = await fetch(`${SUMSUB_BASE_URL}${path}`, {
+    method,
+    headers,
+    body: bodyString,
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Sumsub API error: ${response.status} - ${error}`);
+  }
+
+  return response.json();
+}
 
 interface Applicant {
   id: string;
@@ -15,24 +60,6 @@ interface Applicant {
   email?: string;
   phone?: string;
   ubo_name?: string;
-}
-
-/**
- * Limpa email removendo textos estranhos do OCR
- */
-function cleanEmail(email: string | undefined | null): string | null {
-  if (!email) return null;
-  
-  // Remove "Profile", "image", "Profile image" e variações
-  // Também remove espaços extras e trim
-  const cleaned = email
-    .replace(/Profile\s*image/gi, '')
-    .replace(/Profile/gi, '')
-    .replace(/image/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  
-  return cleaned || null;
 }
 
 export async function POST(request: Request) {
@@ -76,40 +103,42 @@ export async function POST(request: Request) {
           changes: [],
         };
 
-        // Buscar dados do Sumsub
-        const sumsubData = await getApplicantData(applicant.applicant_id);
+        // Buscar dados completos do Sumsub
+        const path = `/resources/applicants/${applicant.applicant_id}/one`;
+        const data = await sumsubRequest('GET', path);
 
         // Preparar dados para atualização
         const updates: any = {};
         let hasChanges = false;
 
+        // Extrair dados da empresa
+        const companyInfo = data.info?.companyInfo || {};
+        
         // CNPJ
-        if (sumsubData.registrationNumber && sumsubData.registrationNumber !== applicant.document_number) {
-          updates.document_number = sumsubData.registrationNumber;
+        const cnpj = companyInfo.registrationNumber;
+        if (cnpj && cnpj !== applicant.document_number) {
+          updates.document_number = cnpj;
           detail.changes.push({
             field: 'CNPJ',
             from: applicant.document_number || 'N/A',
-            to: sumsubData.registrationNumber,
+            to: cnpj,
           });
           hasChanges = true;
         }
 
-        // Email (limpar "Profile image" e outros problemas)
-        const cleanedEmail = cleanEmail(sumsubData.email);
-        const currentEmail = applicant.email;
+        // Email - USAR data.email (nível raiz) que é o email verificado do UBO
+        const correctEmail = data.email || null;
         
-        // Log para debug
         console.log(`[EMAIL-CHECK] ${applicant.company_name}:`);
-        console.log(`  - Sumsub raw: "${sumsubData.email}"`);
-        console.log(`  - Sumsub cleaned: "${cleanedEmail}"`);
-        console.log(`  - Current DB: "${currentEmail}"`);
+        console.log(`  - data.email (CORRETO): "${correctEmail}"`);
+        console.log(`  - Current DB: "${applicant.email}"`);
         
-        if (cleanedEmail && cleanedEmail !== currentEmail) {
-          updates.email = cleanedEmail;
+        if (correctEmail && correctEmail !== applicant.email) {
+          updates.email = correctEmail;
           detail.changes.push({
             field: 'Email',
-            from: currentEmail || 'N/A',
-            to: cleanedEmail,
+            from: applicant.email || 'N/A',
+            to: correctEmail,
           });
           hasChanges = true;
           console.log(`  - ✓ Will update email`);
@@ -118,36 +147,94 @@ export async function POST(request: Request) {
         }
 
         // Nome da empresa
-        if (sumsubData.companyName && sumsubData.companyName !== applicant.company_name) {
-          updates.company_name = sumsubData.companyName;
+        const companyName = companyInfo.companyName;
+        if (companyName && companyName !== applicant.company_name) {
+          updates.company_name = companyName;
           detail.changes.push({
             field: 'Nome',
             from: applicant.company_name || 'N/A',
-            to: sumsubData.companyName,
+            to: companyName,
           });
           hasChanges = true;
         }
 
         // Telefone
-        if (sumsubData.phone && sumsubData.phone !== applicant.phone) {
-          updates.phone = sumsubData.phone;
+        const phone = data.info?.phone || companyInfo.phone;
+        if (phone && phone !== applicant.phone) {
+          updates.phone = phone;
           detail.changes.push({
             field: 'Telefone',
             from: applicant.phone || 'N/A',
-            to: sumsubData.phone,
+            to: phone,
           });
           hasChanges = true;
         }
 
         // Nome do UBO
-        if (sumsubData.uboName && sumsubData.uboName !== applicant.ubo_name) {
-          updates.ubo_name = sumsubData.uboName;
+        let uboName = null;
+        if (companyInfo.beneficialOwners && companyInfo.beneficialOwners.length > 0) {
+          const firstUBO = companyInfo.beneficialOwners[0];
+          if (firstUBO.firstName && firstUBO.lastName) {
+            uboName = `${firstUBO.firstName} ${firstUBO.lastName}`.trim();
+          }
+        }
+        
+        if (uboName && uboName !== applicant.ubo_name) {
+          updates.ubo_name = uboName;
           detail.changes.push({
             field: 'UBO',
             from: applicant.ubo_name || 'N/A',
-            to: sumsubData.uboName,
+            to: uboName,
           });
           hasChanges = true;
+        }
+
+        // Sincronizar UBOs na tabela beneficial_owners
+        if (companyInfo.beneficialOwners && companyInfo.beneficialOwners.length > 0) {
+          console.log(`[UBO-SYNC] Sincronizando ${companyInfo.beneficialOwners.length} UBOs...`);
+          
+          for (const ubo of companyInfo.beneficialOwners) {
+            // Verificar se UBO já existe
+            const { data: existingUBO } = await supabase
+              .from('beneficial_owners')
+              .select('id')
+              .eq('company_id', applicant.id)
+              .eq('applicant_id', ubo.applicantId)
+              .single();
+
+            const uboData = {
+              company_id: applicant.id,
+              applicant_id: ubo.applicantId,
+              first_name: ubo.firstName,
+              middle_name: ubo.middleName,
+              last_name: ubo.lastName,
+              tin: ubo.tin,
+              dob: ubo.dateOfBirth,
+              nationality: ubo.nationality,
+              email: ubo.email,
+              phone: ubo.phone,
+              share_size: ubo.shareSize,
+              types: ubo.type ? [ubo.type] : null,
+              relation: ubo.positions?.[0] || null,
+              submitted: ubo.applicantId ? true : false,
+              verification_status: ubo.applicantId ? 'pending' : 'not_submitted',
+            };
+
+            if (existingUBO) {
+              // Atualizar UBO existente
+              await supabase
+                .from('beneficial_owners')
+                .update(uboData)
+                .eq('id', existingUBO.id);
+              console.log(`[UBO-SYNC] ✓ UBO atualizado: ${ubo.firstName} ${ubo.lastName}`);
+            } else {
+              // Inserir novo UBO
+              await supabase
+                .from('beneficial_owners')
+                .insert(uboData);
+              console.log(`[UBO-SYNC] ✓ UBO criado: ${ubo.firstName} ${ubo.lastName}`);
+            }
+          }
         }
 
         // Atualizar no banco se houver mudanças
@@ -155,7 +242,10 @@ export async function POST(request: Request) {
           console.log(`[UPDATE] Atualizando ${applicant.company_name} (id: ${applicant.id})...`);
           console.log(`[UPDATE] Changes:`, updates);
           
-          const { data: updateData, error: updateError, count } = await supabase
+          // Adicionar timestamp de última sincronização
+          updates.last_sync_date = new Date().toISOString();
+          
+          const { data: updateData, error: updateError } = await supabase
             .from('applicants')
             .update(updates)
             .eq('id', applicant.id)
@@ -165,7 +255,6 @@ export async function POST(request: Request) {
             throw new Error(`Erro ao atualizar: ${updateError.message}`);
           }
 
-          // Verificar se realmente atualizou
           const rowsAffected = updateData?.length || 0;
           console.log(`[UPDATE] Rows affected: ${rowsAffected}`);
           
