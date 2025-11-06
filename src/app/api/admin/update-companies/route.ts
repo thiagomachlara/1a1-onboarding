@@ -60,6 +60,11 @@ interface Applicant {
   email?: string;
   phone?: string;
   ubo_name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
 }
 
 export async function POST(request: Request) {
@@ -74,7 +79,7 @@ export async function POST(request: Request) {
     // Buscar todas as empresas aprovadas
     const { data: applicants, error } = await supabase
       .from('applicants')
-      .select('id, applicant_id, company_name, document_number, email, phone, ubo_name')
+      .select('id, applicant_id, company_name, document_number, email, phone, ubo_name, address, city, state, postal_code, country')
       .eq('applicant_type', 'company')
       .eq('current_status', 'approved')
       .not('applicant_id', 'is', null);
@@ -170,39 +175,64 @@ export async function POST(request: Request) {
           hasChanges = true;
         }
 
-        // Endereço completo
+        // Endereço completo - sempre atualizar se vier do Sumsub
         const legalAddress = companyInfo.legalAddress || {};
         
         // Endereço (rua, número)
         const address = [legalAddress.street, legalAddress.buildingNumber]
           .filter(Boolean)
           .join(', ');
-        if (address) {
+        if (address && address !== applicant.address) {
           updates.address = address;
+          detail.changes.push({
+            field: 'Endereço',
+            from: applicant.address || 'N/A',
+            to: address,
+          });
           hasChanges = true;
         }
 
         // Cidade
-        if (legalAddress.town) {
+        if (legalAddress.town && legalAddress.town !== applicant.city) {
           updates.city = legalAddress.town;
+          detail.changes.push({
+            field: 'Cidade',
+            from: applicant.city || 'N/A',
+            to: legalAddress.town,
+          });
           hasChanges = true;
         }
 
         // Estado
-        if (legalAddress.state) {
+        if (legalAddress.state && legalAddress.state !== applicant.state) {
           updates.state = legalAddress.state;
+          detail.changes.push({
+            field: 'Estado',
+            from: applicant.state || 'N/A',
+            to: legalAddress.state,
+          });
           hasChanges = true;
         }
 
         // CEP
-        if (legalAddress.postCode) {
+        if (legalAddress.postCode && legalAddress.postCode !== applicant.postal_code) {
           updates.postal_code = legalAddress.postCode;
+          detail.changes.push({
+            field: 'CEP',
+            from: applicant.postal_code || 'N/A',
+            to: legalAddress.postCode,
+          });
           hasChanges = true;
         }
 
         // País
-        if (legalAddress.country) {
+        if (legalAddress.country && legalAddress.country !== applicant.country) {
           updates.country = legalAddress.country;
+          detail.changes.push({
+            field: 'País',
+            from: applicant.country || 'N/A',
+            to: legalAddress.country,
+          });
           hasChanges = true;
         }
 
