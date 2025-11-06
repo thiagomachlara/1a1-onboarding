@@ -117,8 +117,10 @@ export async function getApplicantData(applicantId: string): Promise<SumsubAppli
     const path = `/resources/applicants/${applicantId}`;
     const responseData = await sumsubRequest('GET', path);
     
-    // A API retorna um array dentro de 'list'
-    const data = responseData.list && responseData.list.length > 0 ? responseData.list[0] : responseData;
+    // A API retorna um array dentro de 'list.items'
+    const data = responseData.list?.items && responseData.list.items.length > 0 
+      ? responseData.list.items[0] 
+      : responseData;
 
     // Extrair dados baseado no tipo
     const type = data.type === 'company' ? 'company' : 'individual';

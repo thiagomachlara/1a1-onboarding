@@ -53,8 +53,10 @@ export async function GET(request: NextRequest) {
 
     const responseData = await response.json();
     
-    // A API retorna um array dentro de 'list'
-    const data = responseData.list && responseData.list.length > 0 ? responseData.list[0] : responseData;
+    // A API retorna um array dentro de 'list.items'
+    const data = responseData.list?.items && responseData.list.items.length > 0 
+      ? responseData.list.items[0] 
+      : responseData;
 
     console.log(`[DEBUG] Dados recebidos - type: ${data.type}, hasInfo: ${!!data.info}, hasRequiredIdDocs: ${!!data.requiredIdDocs}`);
 
