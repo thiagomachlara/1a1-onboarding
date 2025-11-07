@@ -249,9 +249,16 @@ export async function POST(request: Request) {
               console.log(`[UBO-ADDRESS-DEBUG] Endereços em info:`, JSON.stringify(uboData.info?.addresses || 'nenhum'));
               console.log(`[UBO-ADDRESS-DEBUG] Endereços em fixedInfo:`, JSON.stringify(uboData.fixedInfo?.addresses || 'nenhum'));
               
-              // Extrair endereço do UBO
-              if (uboData.info?.addresses && uboData.info.addresses.length > 0) {
-                const addr = uboData.info.addresses[0];
+              // Extrair endereço do UBO - tentar múltiplas fontes
+              const addresses = uboData.fixedInfo?.addresses || 
+                                uboData.info?.addresses || 
+                                uboData.addresses || 
+                                [];
+              
+              console.log(`[UBO-ADDRESS-DEBUG] Endereços encontrados (${addresses.length}):`, JSON.stringify(addresses).substring(0, 200));
+              
+              if (addresses.length > 0) {
+                const addr = addresses[0];
                 uboAddress = {
                   address: [addr.street, addr.subStreet, addr.buildingNumber, addr.flatNumber].filter(Boolean).join(', '),
                   city: addr.town,

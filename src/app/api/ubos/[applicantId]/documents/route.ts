@@ -44,8 +44,34 @@ export async function GET(
 
     const data = await response.json();
     
-    // A API retorna um objeto com propriedade 'list' contendo os documentos
-    const items = Array.isArray(data) ? data : (data.list?.items || data.items || []);
+    // Debug: ver estrutura da resposta
+    console.log('[DOCS-DEBUG-1] Tipo de data:', typeof data);
+    console.log('[DOCS-DEBUG-2] É array?', Array.isArray(data));
+    console.log('[DOCS-DEBUG-3] Chaves:', Object.keys(data || {}));
+    console.log('[DOCS-DEBUG-4] Primeiros 300 chars:', JSON.stringify(data).substring(0, 300));
+    
+    // Tentar múltiplas estruturas possíveis
+    let items = [];
+    if (Array.isArray(data)) {
+      items = data;
+    } else if (data.list?.items) {
+      items = data.list.items;
+    } else if (data.items) {
+      items = data.items;
+    } else if (data.documents) {
+      items = data.documents;
+    } else {
+      console.log('[DOCS-ERROR] Estrutura desconhecida, retornando vazio');
+      return NextResponse.json({ success: true, documents: [] });
+    }
+    
+    console.log('[DOCS-DEBUG-5] Items encontrados:', items.length);
+    
+    // Validar que items é array
+    if (!Array.isArray(items)) {
+      console.log('[DOCS-ERROR] items não é array:', typeof items);
+      return NextResponse.json({ success: true, documents: [] });
+    }
     
     // Filtrar apenas documentos de imagem
     const documents = items.filter((item: any) => item.idDocType && item.imageId);
