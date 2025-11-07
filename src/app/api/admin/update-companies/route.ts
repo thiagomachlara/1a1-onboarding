@@ -238,7 +238,7 @@ export async function POST(request: Request) {
             let uboAddress = null;
             try {
               const uboPath = `/resources/applicants/${beneficiary.applicantId}/one`;
-              const uboResponse = await sumsubRequest(uboPath);
+              const uboResponse = await sumsubRequest('GET', uboPath);
               const uboData = uboResponse.list?.items?.[0] || uboResponse;
               
               // Extrair endereço do UBO
