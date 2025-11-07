@@ -66,6 +66,7 @@ export default function CompanyDossierPage() {
   const [activeTab, setActiveTab] = useState('cadastro');
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
+  const [uboDocuments, setUboDocuments] = useState<{[key: string]: any[]}>({});
 
   useEffect(() => {
     if (id) {
@@ -87,11 +88,41 @@ export default function CompanyDossierPage() {
       }
 
       setDossier(data.dossier);
+      
+      // Carregar documentos de cada UBO
+      if (data.dossier.ubos && data.dossier.ubos.length > 0) {
+        loadUBODocuments(data.dossier.ubos);
+      }
     } catch (err: any) {
       console.error('Erro ao carregar dossiê:', err);
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUBODocuments = async (ubos: any[]) => {
+    try {
+      const docsMap: {[key: string]: any[]} = {};
+      
+      for (const ubo of ubos) {
+        if (ubo.applicant_id) {
+          try {
+            const response = await fetch(`/api/ubos/${ubo.applicant_id}/documents`);
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+              docsMap[ubo.applicant_id] = data.documents || [];
+            }
+          } catch (err) {
+            console.error(`Erro ao carregar documentos do UBO ${ubo.applicant_id}:`, err);
+          }
+        }
+      }
+      
+      setUboDocuments(docsMap);
+    } catch (err) {
+      console.error('Erro ao carregar documentos dos UBOs:', err);
     }
   };
 
@@ -492,6 +523,22 @@ export default function CompanyDossierPage() {
                         >
                           📥 Report do UBO
                         </button>
+                      )}
+                      {ubo.applicant_id && uboDocuments[ubo.applicant_id] && uboDocuments[ubo.applicant_id].length > 0 && (
+                        <div className="mt-3 border-t pt-3">
+                          <p className="text-sm font-semibold mb-2">📄 Documentos ({uboDocuments[ubo.applicant_id].length})</p>
+                          <div className="space-y-1">
+                            {uboDocuments[ubo.applicant_id].map((doc: any, docIdx: number) => (
+                              <button
+                                key={docIdx}
+                                onClick={() => handleDownloadDocument(doc.id, doc.inspection_id)}
+                                className="text-xs text-blue-600 hover:underline block w-full text-left"
+                              >
+                                📥 {doc.type || 'Documento'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   ))}
