@@ -247,7 +247,7 @@ export async function POST(request: Request) {
               if (uboData.info?.addresses && uboData.info.addresses.length > 0) {
                 const addr = uboData.info.addresses[0];
                 uboAddress = {
-                  address: [addr.street, addr.buildingNumber, addr.flatNumber].filter(Boolean).join(', '),
+                  address: [addr.street, addr.subStreet, addr.buildingNumber, addr.flatNumber].filter(Boolean).join(', '),
                   city: addr.town,
                   state: addr.state,
                   postal_code: addr.postCode,
