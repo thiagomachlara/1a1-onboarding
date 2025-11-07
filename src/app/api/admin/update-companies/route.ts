@@ -238,8 +238,10 @@ export async function POST(request: Request) {
             let uboAddress = null;
             try {
               const uboPath = `/resources/applicants/${beneficiary.applicantId}/one`;
+              console.log(`[UBO-ADDRESS-DEBUG] Buscando endereço do UBO: ${beneficiary.applicantId}`);
               const uboResponse = await sumsubRequest('GET', uboPath);
               const uboData = uboResponse.list?.items?.[0] || uboResponse;
+              console.log(`[UBO-ADDRESS-DEBUG] Endereços disponíveis:`, JSON.stringify(uboData.info?.addresses || 'nenhum'));
               
               // Extrair endereço do UBO
               if (uboData.info?.addresses && uboData.info.addresses.length > 0) {
@@ -251,6 +253,9 @@ export async function POST(request: Request) {
                   postal_code: addr.postCode,
                   country: addr.country
                 };
+                console.log(`[UBO-ADDRESS-DEBUG] Endereço extraído:`, JSON.stringify(uboAddress));
+              } else {
+                console.log(`[UBO-ADDRESS-DEBUG] Nenhum endereço encontrado para o UBO`);
               }
             } catch (error) {
               console.log(`[UBO-SYNC] ⚠️  Não foi possível buscar endereço do UBO ${beneficiary.applicantId}`);
