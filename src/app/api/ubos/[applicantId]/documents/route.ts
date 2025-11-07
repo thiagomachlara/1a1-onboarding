@@ -44,8 +44,11 @@ export async function GET(
 
     const data = await response.json();
     
+    // A API retorna um objeto com propriedade 'list' contendo os documentos
+    const items = Array.isArray(data) ? data : (data.list?.items || data.items || []);
+    
     // Filtrar apenas documentos de imagem
-    const documents = data.filter((item: any) => item.idDocType && item.imageId);
+    const documents = items.filter((item: any) => item.idDocType && item.imageId);
 
     return NextResponse.json({
       success: true,
