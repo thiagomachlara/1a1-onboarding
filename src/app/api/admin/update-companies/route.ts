@@ -234,12 +234,31 @@ export async function POST(request: Request) {
           for (const beneficiary of beneficiaries) {
             const ubo = beneficiary.beneficiaryInfo || {};
             
-            // Buscar dados completos do UBO individual (incluindo endereço)
+            // Buscar dados completos do UBO individual (incluindo endereço E STATUS)
             let uboAddress = null;
+            let uboStatus = 'not_submitted';  // Status padrão
             try {
               const uboPath = `/resources/applicants/${beneficiary.applicantId}/one`;
               const uboResponse = await sumsubRequest('GET', uboPath);
               const uboData = uboResponse.list?.items?.[0] || uboResponse;
+              
+              // Extrair status real do UBO
+              if (uboData.review) {
+                const reviewAnswer = uboData.review.reviewResult?.reviewAnswer;
+                const reviewStatus = uboData.review.reviewStatus;
+                
+                if (reviewAnswer === 'GREEN') {
+                  uboStatus = 'approved';
+                } else if (reviewAnswer === 'RED') {
+                  uboStatus = 'rejected';
+                } else if (reviewAnswer === 'YELLOW') {
+                  uboStatus = 'pending';
+                } else if (reviewStatus === 'pending' || reviewStatus === 'init') {
+                  uboStatus = 'pending';
+                }
+                
+                console.log(`[UBO-STATUS] ${ubo.firstName} ${ubo.lastName}: ${reviewAnswer} → ${uboStatus}`);
+              }
               
               // Extrair endereço do UBO - tentar múltiplas fontes
               const addresses = uboData.fixedInfo?.addresses || 
@@ -284,7 +303,7 @@ export async function POST(request: Request) {
               types: beneficiary.types || null,
               relation: null,
               submitted: beneficiary.submitted || false,
-              verification_status: beneficiary.submitted ? 'pending' : 'not_submitted',
+              verification_status: uboStatus,
               // Endereço do UBO
               address: uboAddress?.address || null,
               city: uboAddress?.city || null,

@@ -20,8 +20,8 @@ export async function GET(
   try {
     const { applicantId } = await params;
 
-    // Buscar metadados dos documentos do UBO
-    const path = `/resources/applicants/${applicantId}/metadata/resources`;
+    // Buscar dados completos do UBO (mesma lógica da empresa)
+    const path = `/resources/applicants/${applicantId}/one`;
     const timestamp = Math.floor(Date.now() / 1000);
     const signature = createSignature('GET', path, timestamp);
 
@@ -35,46 +35,39 @@ export async function GET(
     });
 
     if (!response.ok) {
-      console.error('Erro ao buscar documentos do UBO:', await response.text());
+      console.error('Erro ao buscar dados do UBO:', await response.text());
       return NextResponse.json(
-        { error: 'Erro ao buscar documentos do UBO' },
+        { error: 'Erro ao buscar dados do UBO' },
         { status: response.status }
       );
     }
 
     const data = await response.json();
     
-    // Tentar múltiplas estruturas possíveis
-    let items = [];
-    if (Array.isArray(data)) {
-      items = data;
-    } else if (data.list?.items) {
-      items = data.list.items;
-    } else if (data.items) {
-      items = data.items;
-    } else if (data.documents) {
-      items = data.documents;
-    } else {
-      return NextResponse.json({ success: true, documents: [] });
-    }
+    // Extrair documentos de requiredIdDocs.docSets (mesma lógica da empresa)
+    const documents = [];
+    const docSets = data.requiredIdDocs?.docSets || [];
     
-    // Validar que items é array
-    if (!Array.isArray(items)) {
-      return NextResponse.json({ success: true, documents: [] });
+    for (const docSet of docSets) {
+      const imageResults = docSet.imageReviewResults || [];
+      for (const doc of imageResults) {
+        if (doc.imageId && doc.idDocType) {
+          documents.push({
+            id: doc.imageId,
+            type: doc.idDocType,
+            doc_set_type: docSet.idDocSetType,
+            country: doc.country,
+            inspection_id: applicantId,
+          });
+        }
+      }
     }
-    
-    // Filtrar apenas documentos de imagem
-    const documents = items.filter((item: any) => item.idDocType && item.imageId);
+
+    console.log(`[UBO-DOCS] ${applicantId}: ${documents.length} documentos encontrados`);
 
     return NextResponse.json({
       success: true,
-      documents: documents.map((doc: any) => ({
-        id: doc.imageId,
-        type: doc.idDocType,
-        doc_set_type: doc.idDocSetType,
-        country: doc.country,
-        inspection_id: applicantId,
-      })),
+      documents,
     });
   } catch (error) {
     console.error('Erro ao processar documentos do UBO:', error);
