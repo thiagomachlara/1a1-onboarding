@@ -44,12 +44,6 @@ export async function GET(
 
     const data = await response.json();
     
-    // Debug: ver estrutura da resposta
-    console.log('[DOCS-DEBUG-1] Tipo de data:', typeof data);
-    console.log('[DOCS-DEBUG-2] É array?', Array.isArray(data));
-    console.log('[DOCS-DEBUG-3] Chaves:', Object.keys(data || {}));
-    console.log('[DOCS-DEBUG-4] Primeiros 300 chars:', JSON.stringify(data).substring(0, 300));
-    
     // Tentar múltiplas estruturas possíveis
     let items = [];
     if (Array.isArray(data)) {
@@ -61,15 +55,11 @@ export async function GET(
     } else if (data.documents) {
       items = data.documents;
     } else {
-      console.log('[DOCS-ERROR] Estrutura desconhecida, retornando vazio');
       return NextResponse.json({ success: true, documents: [] });
     }
     
-    console.log('[DOCS-DEBUG-5] Items encontrados:', items.length);
-    
     // Validar que items é array
     if (!Array.isArray(items)) {
-      console.log('[DOCS-ERROR] items não é array:', typeof items);
       return NextResponse.json({ success: true, documents: [] });
     }
     

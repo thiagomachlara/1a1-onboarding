@@ -238,24 +238,14 @@ export async function POST(request: Request) {
             let uboAddress = null;
             try {
               const uboPath = `/resources/applicants/${beneficiary.applicantId}/one`;
-              console.log(`[UBO-DEBUG-1] Buscando dados do UBO: ${beneficiary.applicantId}`);
               const uboResponse = await sumsubRequest('GET', uboPath);
-              console.log(`[UBO-DEBUG-2] Resposta bruta (primeiros 500 chars):`, JSON.stringify(uboResponse).substring(0, 500));
               const uboData = uboResponse.list?.items?.[0] || uboResponse;
-              console.log(`[UBO-DEBUG-3] uboData.info existe?`, !!uboData.info);
-              console.log(`[UBO-DEBUG-4] uboData.info.addresses existe?`, !!uboData.info?.addresses);
-              console.log(`[UBO-DEBUG-5] uboData.fixedInfo existe?`, !!uboData.fixedInfo);
-              console.log(`[UBO-DEBUG-6] Chaves de uboData:`, Object.keys(uboData));
-              console.log(`[UBO-ADDRESS-DEBUG] Endereços em info:`, JSON.stringify(uboData.info?.addresses || 'nenhum'));
-              console.log(`[UBO-ADDRESS-DEBUG] Endereços em fixedInfo:`, JSON.stringify(uboData.fixedInfo?.addresses || 'nenhum'));
               
               // Extrair endereço do UBO - tentar múltiplas fontes
               const addresses = uboData.fixedInfo?.addresses || 
                                 uboData.info?.addresses || 
                                 uboData.addresses || 
                                 [];
-              
-              console.log(`[UBO-ADDRESS-DEBUG] Endereços encontrados (${addresses.length}):`, JSON.stringify(addresses).substring(0, 200));
               
               if (addresses.length > 0) {
                 const addr = addresses[0];
@@ -266,9 +256,6 @@ export async function POST(request: Request) {
                   postal_code: addr.postCode,
                   country: addr.country
                 };
-                console.log(`[UBO-ADDRESS-DEBUG] Endereço extraído:`, JSON.stringify(uboAddress));
-              } else {
-                console.log(`[UBO-ADDRESS-DEBUG] Nenhum endereço encontrado para o UBO`);
               }
             } catch (error) {
               console.log(`[UBO-SYNC] ⚠️  Não foi possível buscar endereço do UBO ${beneficiary.applicantId}`);
