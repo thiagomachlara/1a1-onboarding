@@ -15,10 +15,10 @@ function createSignature(method: string, url: string, timestamp: number, body?: 
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { applicantId: string } }
+  { params }: { params: Promise<{ applicantId: string }> }
 ) {
   try {
-    const { applicantId } = params;
+    const { applicantId } = await params;
 
     // Buscar metadados dos documentos do UBO
     const path = `/resources/applicants/${applicantId}/metadata/resources`;
