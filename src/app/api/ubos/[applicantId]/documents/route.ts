@@ -20,8 +20,8 @@ export async function GET(
   try {
     const { applicantId } = await params;
 
-    // Buscar dados completos do UBO (mesma lógica da empresa)
-    const path = `/resources/applicants/${applicantId}/one`;
+    // Buscar documentos usando endpoint correto (mesmo da empresa)
+    const path = `/resources/applicants/${applicantId}/metadata/resources`;
     const timestamp = Math.floor(Date.now() / 1000);
     const signature = createSignature('GET', path, timestamp);
 
@@ -35,31 +35,38 @@ export async function GET(
     });
 
     if (!response.ok) {
-      console.error('Erro ao buscar dados do UBO:', await response.text());
+      console.error('Erro ao buscar documentos do UBO:', await response.text());
       return NextResponse.json(
-        { error: 'Erro ao buscar dados do UBO' },
+        { error: 'Erro ao buscar documentos do UBO' },
         { status: response.status }
       );
     }
 
     const data = await response.json();
     
-    // Extrair documentos de requiredIdDocs.docSets (mesma lógica da empresa)
+    // Extrair documentos de items[] (mesma lógica da empresa)
     const documents = [];
-    const docSets = data.requiredIdDocs?.docSets || [];
     
-    for (const docSet of docSets) {
-      const imageResults = docSet.imageReviewResults || [];
-      for (const doc of imageResults) {
-        if (doc.imageId && doc.idDocType) {
-          documents.push({
-            id: doc.imageId,
-            type: doc.idDocType,
-            doc_set_type: docSet.idDocSetType,
-            country: doc.country,
-            inspection_id: applicantId,
-          });
-        }
+    if (data.items && Array.isArray(data.items)) {
+      for (const item of data.items) {
+        documents.push({
+          id: item.id,
+          preview_id: item.previewId,
+          inspection_id: applicantId,
+          file_name: item.fileMetadata?.fileName || 'documento.pdf',
+          file_type: item.fileMetadata?.fileType || 'unknown',
+          file_size: item.fileMetadata?.fileSize || 0,
+          doc_type: item.idDocDef?.idDocType || 'UNKNOWN',
+          doc_sub_type: item.idDocDef?.idDocSubType || null,
+          country: item.idDocDef?.country || null,
+          added_date: item.addedDate,
+          review_answer: item.reviewResult?.reviewAnswer || 'pending',
+          reject_labels: item.reviewResult?.rejectLabels || [],
+          review_reject_type: item.reviewResult?.reviewRejectType || null,
+          moderator_comment: item.reviewResult?.moderationComment || null,
+          source: item.source || 'fileupload',
+          deactivated: item.deactivated || false,
+        });
       }
     }
 
