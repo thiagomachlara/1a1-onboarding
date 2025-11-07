@@ -425,6 +425,15 @@ export default function CompanyDossierPage() {
                       {ubo.email && (
                         <p className="text-sm text-gray-600">📧 {ubo.email}</p>
                       )}
+                      {ubo.phone && (
+                        <p className="text-sm text-gray-600">📱 {ubo.phone}</p>
+                      )}
+                      {ubo.dob && (
+                        <p className="text-sm text-gray-600">🎂 {new Date(ubo.dob).toLocaleDateString('pt-BR')}</p>
+                      )}
+                      {ubo.nationality && (
+                        <p className="text-sm text-gray-600">🌍 {ubo.nationality}</p>
+                      )}
                       {ubo.relation && (
                         <p className="text-sm text-gray-600 mt-1">💼 {ubo.relation}</p>
                       )}
