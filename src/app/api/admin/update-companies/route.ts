@@ -233,6 +233,29 @@ export async function POST(request: Request) {
           
           for (const beneficiary of beneficiaries) {
             const ubo = beneficiary.beneficiaryInfo || {};
+            
+            // Buscar dados completos do UBO individual (incluindo endereço)
+            let uboAddress = null;
+            try {
+              const uboPath = `/resources/applicants/${beneficiary.applicantId}/one`;
+              const uboResponse = await sumsubRequest(uboPath);
+              const uboData = uboResponse.list?.items?.[0] || uboResponse;
+              
+              // Extrair endereço do UBO
+              if (uboData.info?.addresses && uboData.info.addresses.length > 0) {
+                const addr = uboData.info.addresses[0];
+                uboAddress = {
+                  address: [addr.street, addr.buildingNumber, addr.flatNumber].filter(Boolean).join(', '),
+                  city: addr.town,
+                  state: addr.state,
+                  postal_code: addr.postCode,
+                  country: addr.country
+                };
+              }
+            } catch (error) {
+              console.log(`[UBO-SYNC] ⚠️  Não foi possível buscar endereço do UBO ${beneficiary.applicantId}`);
+            }
+            
             // Verificar se UBO já existe
             const { data: existingUBO } = await supabase
               .from('beneficial_owners')
@@ -257,6 +280,12 @@ export async function POST(request: Request) {
               relation: null,
               submitted: beneficiary.submitted || false,
               verification_status: beneficiary.submitted ? 'pending' : 'not_submitted',
+              // Endereço do UBO
+              address: uboAddress?.address || null,
+              city: uboAddress?.city || null,
+              state: uboAddress?.state || null,
+              postal_code: uboAddress?.postal_code || null,
+              country: uboAddress?.country || null,
             };
 
             if (existingUBO) {

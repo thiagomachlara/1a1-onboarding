@@ -506,6 +506,21 @@ export default function CompanyDossierPage() {
                       {ubo.nationality && (
                         <p className="text-sm text-gray-600">🌍 {ubo.nationality}</p>
                       )}
+                      {ubo.address && (
+                        <div className="mt-2 pt-2 border-t">
+                          <p className="text-xs font-semibold text-gray-500 mb-1">🏠 Endereço:</p>
+                          <p className="text-sm text-gray-600">{ubo.address}</p>
+                          {ubo.city && ubo.state && (
+                            <p className="text-sm text-gray-600">{ubo.city}, {ubo.state}</p>
+                          )}
+                          {ubo.postal_code && (
+                            <p className="text-sm text-gray-600">CEP: {ubo.postal_code}</p>
+                          )}
+                          {ubo.country && (
+                            <p className="text-sm text-gray-600">{ubo.country}</p>
+                          )}
+                        </div>
+                      )}
                       {ubo.relation && (
                         <p className="text-sm text-gray-600 mt-1">💼 {ubo.relation}</p>
                       )}
