@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
+import toast from 'react-hot-toast';
 
 interface CompanyDossier {
   company: {
@@ -132,6 +133,8 @@ export default function CompanyDossierPage() {
   const handleDownloadSummaryReport = async () => {
     if (!dossier?.company.applicant_id) return;
     
+    const toastId = toast.loading('🔄 Gerando relatório da empresa...');
+    
     try {
       const response = await fetch('/api/sumsub/summary-report', {
         method: 'POST',
@@ -152,10 +155,48 @@ export default function CompanyDossierPage() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+        toast.success('✅ Relatório baixado com sucesso!', { id: toastId });
+      } else {
+        toast.error('❌ Erro ao gerar relatório', { id: toastId });
       }
     } catch (err) {
       console.error('Erro ao baixar summary report:', err);
-      alert('Erro ao baixar relatório');
+      toast.error('❌ Erro ao baixar relatório', { id: toastId });
+    }
+  };
+
+  const handleDownloadUBOReport = async (applicantId: string, uboName: string) => {
+    if (!applicantId) return;
+    
+    const toastId = toast.loading('🔄 Gerando relatório do UBO...');
+    
+    try {
+      const response = await fetch('/api/sumsub/summary-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          applicantId: applicantId,
+          type: 'individual',
+        }),
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${uboName}_summary_report.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast.success('✅ Relatório do UBO baixado com sucesso!', { id: toastId });
+      } else {
+        toast.error('❌ Erro ao gerar relatório do UBO', { id: toastId });
+      }
+    } catch (err) {
+      console.error('Erro ao baixar summary report do UBO:', err);
+      toast.error('❌ Erro ao baixar relatório do UBO', { id: toastId });
     }
   };
 
@@ -429,7 +470,7 @@ export default function CompanyDossierPage() {
                         <p className="text-sm text-gray-600">📱 {ubo.phone}</p>
                       )}
                       {ubo.dob && (
-                        <p className="text-sm text-gray-600">🎂 {new Date(ubo.dob).toLocaleDateString('pt-BR')}</p>
+                        <p className="text-sm text-gray-600">🎂 {new Date(ubo.dob + 'T12:00:00').toLocaleDateString('pt-BR')}</p>
                       )}
                       {ubo.nationality && (
                         <p className="text-sm text-gray-600">🌍 {ubo.nationality}</p>
@@ -444,6 +485,14 @@ export default function CompanyDossierPage() {
                           {ubo.verification_status}
                         </span>
                       )}
+                      {ubo.applicant_id && (
+                        <button
+                          onClick={() => handleDownloadUBOReport(ubo.applicant_id, `${ubo.first_name}_${ubo.last_name}`)}
+                          className="mt-3 w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                        >
+                          📥 Report do UBO
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -454,17 +503,9 @@ export default function CompanyDossierPage() {
           {/* Aba Documentos */}
           {activeTab === 'documentos' && (
             <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-1">Documentos</h2>
-                  <p className="text-gray-600">{documents.length} documento(s) encontrado(s)</p>
-                </div>
-                <button
-                  onClick={handleDownloadSummaryReport}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  📥 Download Summary Report
-                </button>
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Documentos</h2>
+                <p className="text-gray-600">{documents.length} documento(s) encontrado(s)</p>
               </div>
               
               {documents.length === 0 ? (
