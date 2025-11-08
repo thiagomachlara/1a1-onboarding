@@ -109,11 +109,13 @@ export async function GET(
       .limit(50);
 
     // Buscar dados de wallet
-    const { data: businessData } = await supabase
+    const { data: businessData, error: businessDataError } = await supabase
       .from('business_data')
       .select('wallet_address, wallet_verified, whitelist_status')
       .eq('applicant_id', id)
       .single();
+
+    console.log('[DOSSIER] Business data query:', { id, businessData, businessDataError });
 
     // Buscar último PDF de screening
     const { data: screeningPdf } = await supabase
