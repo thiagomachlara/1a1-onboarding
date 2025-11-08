@@ -71,6 +71,11 @@ export async function POST(request: NextRequest) {
         userAgent,
       });
       
+      // Inicializar cliente Supabase com service_role key
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
       // Salvar PDF no Storage
       const termFileName = `wallet_term_${applicant.external_user_id}_${Date.now()}.pdf`;
       
