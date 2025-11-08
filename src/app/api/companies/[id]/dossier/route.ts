@@ -112,14 +112,14 @@ export async function GET(
     const { data: businessData } = await supabase
       .from('business_data')
       .select('wallet_address, wallet_verified, whitelist_status')
-      .eq('company_id', id)
+      .eq('applicant_id', id)
       .single();
 
     // Buscar último PDF de screening
     const { data: screeningPdf } = await supabase
       .from('verification_history')
       .select('metadata')
-      .eq('company_id', id)
+      .eq('applicant_id', id)
       .eq('event_type', 'screening_pdf_generated')
       .order('created_at', { ascending: false })
       .limit(1)
