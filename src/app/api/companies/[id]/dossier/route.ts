@@ -111,7 +111,7 @@ export async function GET(
     // Buscar dados de wallet
     const { data: businessData, error: businessDataError } = await supabase
       .from('business_data')
-      .select('wallet_address, wallet_verified')
+      .select('wallet_address, wallet_verified, wallet_term_pdf_path, wallet_registered_at, wallet_ip')
       .eq('applicant_id', id)
       .single();
 
@@ -180,6 +180,9 @@ export async function GET(
       // Blockchain
       blockchain: {
         wallet_address: businessData?.wallet_address || null,
+        wallet_term_pdf_path: businessData?.wallet_term_pdf_path || null,
+        wallet_registered_at: businessData?.wallet_registered_at || null,
+        wallet_ip: businessData?.wallet_ip || null,
         whitelist_status: 'pending', // TODO: Implementar lógica de whitelist_status
         whitelist_pdf_url: screeningPdfUrl,
       },

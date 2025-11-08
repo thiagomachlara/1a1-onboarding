@@ -709,16 +709,45 @@ export default function CompanyDossierPage() {
                   </span>
                 </div>
 
+                {dossier.blockchain.wallet_term_pdf_path && (
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Termo de Aceite de Wallet</h3>
+                    <div className="space-y-2 mb-4">
+                      {dossier.blockchain.wallet_registered_at && (
+                        <p className="text-sm text-gray-600">
+                          <strong>Data de Cadastro:</strong>{' '}
+                          {new Date(dossier.blockchain.wallet_registered_at).toLocaleString('pt-BR', {
+                            dateStyle: 'long',
+                            timeStyle: 'short',
+                          })}
+                        </p>
+                      )}
+                      {dossier.blockchain.wallet_ip && (
+                        <p className="text-sm text-gray-600">
+                          <strong>IP:</strong> {dossier.blockchain.wallet_ip}
+                        </p>
+                      )}
+                    </div>
+                    <a
+                      href={`/api/companies/${dossier.company.id}/wallet-term/download`}
+                      download
+                      className="inline-block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      📝 Download Termo de Wallet
+                    </a>
+                  </div>
+                )}
+
                 {dossier.blockchain.whitelist_pdf_url && (
                   <div className="bg-gray-50 rounded-lg p-6">
-                    <h3 className="text-sm font-medium text-gray-500 mb-3">PDF Whitelist</h3>
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Screening Chainalysis</h3>
                     <a
                       href={dossier.blockchain.whitelist_pdf_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                     >
-                      📥 Download PDF Whitelist
+                      📅 Download PDF Screening
                     </a>
                   </div>
                 )}

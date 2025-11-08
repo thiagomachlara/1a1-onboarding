@@ -7,6 +7,7 @@ import {
 import { addVerificationHistory } from '@/lib/supabase-db';
 import { performWalletScreening, formatScreeningResult } from '@/lib/chainalysis';
 import { generateScreeningPDF, generateScreeningPDFFilename } from '@/lib/screening-pdf';
+import { generateWalletTermPDF } from '@/lib/wallet-term-pdf';
 import { createClient } from '@supabase/supabase-js';
 import { createShortLink, buildShortUrl } from '@/lib/pdf-short-links';
 
@@ -42,6 +43,68 @@ export async function POST(request: NextRequest) {
     }
 
     const applicant = result.applicant;
+
+    // Capturar IP e User-Agent para assinatura eletrônica
+    const ip = request.headers.get('x-forwarded-for') || 
+               request.headers.get('x-real-ip') || 
+               'unknown';
+    const userAgent = request.headers.get('user-agent') || 'unknown';
+    const signedAt = new Date().toISOString();
+
+    console.log('[Wallet Registration] Signature data:', { ip, userAgent, signedAt });
+
+    // ========================================================================
+    // GERAR PDF DO TERMO DE WALLET
+    // ========================================================================
+    
+    let termPdfPath: string | null = null;
+    
+    try {
+      console.log('[Wallet Registration] Gerando PDF do termo de wallet...');
+      
+      // Gerar PDF do termo
+      const termPdfBuffer = generateWalletTermPDF({
+        applicant,
+        walletAddress,
+        signedAt,
+        ip,
+        userAgent,
+      });
+      
+      // Salvar PDF no Storage
+      const termFileName = `wallet_term_${applicant.external_user_id}_${Date.now()}.pdf`;
+      
+      const { data: termUploadData, error: termUploadError } = await supabase.storage
+        .from('wallet-terms')
+        .upload(termFileName, termPdfBuffer, {
+          contentType: 'application/pdf',
+          cacheControl: '3600',
+        });
+      
+      if (termUploadError) {
+        console.error('[Wallet Registration] Erro ao fazer upload do termo:', termUploadError);
+      } else {
+        console.log('[Wallet Registration] Termo salvo com sucesso:', termFileName);
+        termPdfPath = termFileName;
+        
+        // Adicionar ao histórico
+        await addVerificationHistory({
+          applicant_id: applicant.id,
+          event_type: 'wallet_term_generated',
+          new_status: applicant.current_status,
+          metadata: {
+            walletAddress,
+            termPdfPath,
+            ip,
+            userAgent,
+            timestamp: signedAt,
+          },
+        });
+      }
+    } catch (termPdfError) {
+      console.error('[Wallet Registration] Erro ao gerar PDF do termo:', termPdfError);
+      // Não bloquear o cadastro se houver erro no PDF do termo
+    }
 
     // ========================================================================
     // CHAINALYSIS SCREENING
@@ -151,8 +214,13 @@ export async function POST(request: NextRequest) {
     // SALVAR WALLET
     // ========================================================================
 
-    // Salvar wallet
-    await saveWallet(applicant.id, walletAddress);
+    // Salvar wallet com dados de assinatura eletrônica
+    await saveWallet(applicant.id, walletAddress, {
+      ip,
+      userAgent,
+      signedAt,
+      pdfPath: termPdfPath || undefined,
+    });
 
     // Adicionar ao histórico
     await addVerificationHistory({

@@ -188,7 +188,13 @@ export async function signContract(
  */
 export async function saveWallet(
   applicantId: string,
-  walletAddress: string
+  walletAddress: string,
+  signatureData?: {
+    ip: string;
+    userAgent: string;
+    signedAt: string;
+    pdfPath?: string;
+  }
 ): Promise<void> {
   // Busca ou cria business_data
   const { data: businessData } = await supabase
@@ -204,6 +210,10 @@ export async function saveWallet(
       .update({
         wallet_address: walletAddress,
         wallet_verified: false, // Será verificado manualmente via Chainalysis
+        wallet_registered_at: signatureData?.signedAt || new Date().toISOString(),
+        wallet_ip: signatureData?.ip,
+        wallet_user_agent: signatureData?.userAgent,
+        wallet_term_pdf_path: signatureData?.pdfPath,
         updated_at: new Date().toISOString(),
       })
       .eq('applicant_id', applicantId);
@@ -220,6 +230,10 @@ export async function saveWallet(
         applicant_id: applicantId,
         wallet_address: walletAddress,
         wallet_verified: false,
+        wallet_registered_at: signatureData?.signedAt || new Date().toISOString(),
+        wallet_ip: signatureData?.ip,
+        wallet_user_agent: signatureData?.userAgent,
+        wallet_term_pdf_path: signatureData?.pdfPath,
       });
 
     if (error) {
