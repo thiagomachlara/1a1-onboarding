@@ -37,6 +37,9 @@ interface CompanyDossier {
   };
   blockchain: {
     wallet_address: string;
+    wallet_term_pdf_path?: string;
+    wallet_registered_at?: string;
+    wallet_ip?: string;
     whitelist_status: string;
     whitelist_pdf_url: string;
   };
