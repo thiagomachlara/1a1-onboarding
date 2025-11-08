@@ -23,6 +23,8 @@ interface CompanyDossier {
     created_at: string;
     updated_at: string;
     last_sync_date: string;
+    contract_signed_at?: string;
+    contract_pdf_path?: string;
   };
   ubos: any[];
   documents: any[];
@@ -453,6 +455,29 @@ export default function CompanyDossierPage() {
                       : 'Nunca'}
                   </p>
                 </div>
+                {dossier.company.contract_signed_at && (
+                  <div className="md:col-span-2">
+                    <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                      <h3 className="text-sm font-medium text-green-900 mb-2">✅ Contrato Assinado</h3>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-green-800">
+                            Assinado em {new Date(dossier.company.contract_signed_at).toLocaleDateString('pt-BR')} às {new Date(dossier.company.contract_signed_at).toLocaleTimeString('pt-BR')}
+                          </p>
+                        </div>
+                        {dossier.company.contract_pdf_path && (
+                          <a
+                            href={`/api/companies/${dossier.company.id}/contract/download`}
+                            download
+                            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            📥 Download Contrato
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="md:col-span-2">
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Applicant ID (Sumsub)</h3>
                   <p className="text-sm font-mono text-gray-600 break-all">{dossier.company.applicant_id || 'N/A'}</p>

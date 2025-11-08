@@ -108,6 +108,25 @@ export async function GET(
       .order('created_at', { ascending: false })
       .limit(50);
 
+    // Buscar dados de wallet
+    const { data: businessData } = await supabase
+      .from('business_data')
+      .select('wallet_address, wallet_verified, whitelist_status')
+      .eq('applicant_id', id)
+      .single();
+
+    // Buscar último PDF de screening
+    const { data: screeningPdf } = await supabase
+      .from('verification_history')
+      .select('metadata')
+      .eq('applicant_id', id)
+      .eq('event_type', 'screening_pdf_generated')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    const screeningPdfUrl = screeningPdf?.metadata?.pdfUrl || null;
+
     // Buscar dados completos do Sumsub (se disponível)
     let sumsubData = null;
     if (company.applicant_id) {
@@ -158,9 +177,9 @@ export async function GET(
 
       // Blockchain
       blockchain: {
-        wallet_address: company.wallet_address,
-        whitelist_status: company.whitelist_status || 'pending',
-        whitelist_pdf_url: company.whitelist_pdf_url,
+        wallet_address: businessData?.wallet_address || null,
+        whitelist_status: businessData?.whitelist_status || 'pending',
+        whitelist_pdf_url: screeningPdfUrl,
       },
 
       // Notas do Compliance
