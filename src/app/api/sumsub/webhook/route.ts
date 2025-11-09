@@ -15,6 +15,7 @@ import {
   type Applicant,
 } from '@/lib/supabase-db';
 import { consultarCNPJ, formatarEndereco, formatarTelefone } from '@/lib/brasilapi';
+import { enrichAddress } from '@/lib/address-enrichment';
 import { getApplicantData, getSummaryReportPDF } from '@/lib/sumsub-api';
 import {
   generateContractToken,
@@ -333,6 +334,43 @@ async function handleApplicantPending(data: any) {
 }
 
 /**
+ * Enriquece endereço de empresa com BrasilAPI
+ */
+async function enrichCompanyAddress(applicantId: string, cnpj: string, originalAddress?: string | null) {
+  try {
+    console.log(`[Address Enrichment] Starting enrichment for company: ${cnpj}`);
+    const enrichedAddress = await enrichAddress(cnpj, originalAddress || undefined);
+    
+    // Atualizar campos enriched_* no banco
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    
+    await supabase
+      .from('applicants')
+      .update({
+        enriched_street: enrichedAddress.street,
+        enriched_number: enrichedAddress.number,
+        enriched_complement: enrichedAddress.complement,
+        enriched_neighborhood: enrichedAddress.neighborhood,
+        enriched_city: enrichedAddress.city,
+        enriched_state: enrichedAddress.state,
+        enriched_postal_code: enrichedAddress.postal_code,
+        enriched_source: enrichedAddress.source,
+        enriched_at: new Date().toISOString(),
+      })
+      .eq('id', applicantId);
+    
+    console.log(`[Address Enrichment] Success:`, enrichedAddress);
+  } catch (error) {
+    console.error(`[Address Enrichment] Failed:`, error);
+    // Não falhar o processo se enriquecimento falhar
+  }
+}
+
+/**
  * Handler para evento applicantReviewed
  */
 async function handleApplicantReviewed(data: any) {
@@ -428,6 +466,11 @@ async function handleApplicantReviewed(data: any) {
     });
 
     console.log('✅ Applicant reviewed and saved:', applicant.id);
+    
+    // 🆕 Enriquecer endereço (apenas para empresas)
+    if (verificationType === 'company' && applicant.id && document) {
+      await enrichCompanyAddress(applicant.id, document, applicant.address);
+    }
   } catch (error) {
     console.error('❌ Failed to save reviewed applicant:', error);
   }

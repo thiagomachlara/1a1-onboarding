@@ -18,6 +18,15 @@ interface CompanyDossier {
     state: string;
     postal_code: string;
     country: string;
+    enriched_street?: string;
+    enriched_number?: string;
+    enriched_complement?: string;
+    enriched_neighborhood?: string;
+    enriched_city?: string;
+    enriched_state?: string;
+    enriched_postal_code?: string;
+    enriched_source?: string;
+    enriched_at?: string;
     current_status: string;
     applicant_type: string;
     created_at: string;
@@ -424,22 +433,63 @@ export default function CompanyDossierPage() {
                   <h3 className="text-sm font-medium text-gray-500 mb-1">Telefone</h3>
                   <p className="text-base text-gray-900">{dossier.company.phone || 'N/A'}</p>
                 </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Endereço</h3>
-                  <p className="text-base text-gray-900">{dossier.company.address || 'N/A'}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Cidade/Estado</h3>
-                  <p className="text-base text-gray-900">
-                    {dossier.company.city && dossier.company.state 
-                      ? `${dossier.company.city}, ${dossier.company.state}`
-                      : 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">CEP</h3>
-                  <p className="text-base text-gray-900">{dossier.company.postal_code || 'N/A'}</p>
-                </div>
+                {/* Endereço Enriquecido ou Original */}
+                {dossier.company.enriched_at ? (
+                  <>
+                    <div className="col-span-2">
+                      <h3 className="text-sm font-medium text-gray-500 mb-1">Endereço</h3>
+                      <div className="space-y-1">
+                        <p className="text-base text-gray-900">
+                          {dossier.company.enriched_street}, {dossier.company.enriched_number}
+                          {dossier.company.enriched_complement && ` - ${dossier.company.enriched_complement}`}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {dossier.company.enriched_neighborhood} - {dossier.company.enriched_city}/{dossier.company.enriched_state}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          CEP: {dossier.company.enriched_postal_code}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-xs text-green-600 font-medium">
+                            Endereço verificado via Receita Federal
+                          </span>
+                        </div>
+                        {dossier.company.address && (
+                          <details className="mt-3">
+                            <summary className="cursor-pointer text-xs text-gray-500 hover:text-gray-700">
+                              Ver endereço original informado pelo cliente
+                            </summary>
+                            <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                              <p className="text-sm text-gray-700">{dossier.company.address}</p>
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-1">Endereço</h3>
+                      <p className="text-base text-gray-900">{dossier.company.address || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-1">Cidade/Estado</h3>
+                      <p className="text-base text-gray-900">
+                        {dossier.company.city && dossier.company.state 
+                          ? `${dossier.company.city}, ${dossier.company.state}`
+                          : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-1">CEP</h3>
+                      <p className="text-base text-gray-900">{dossier.company.postal_code || 'N/A'}</p>
+                    </div>
+                  </>
+                )}
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-1">País</h3>
                   <p className="text-base text-gray-900">{dossier.company.country || 'N/A'}</p>
