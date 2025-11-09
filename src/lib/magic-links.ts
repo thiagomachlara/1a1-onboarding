@@ -166,15 +166,23 @@ export async function validateWalletToken(token: string) {
 export async function signContract(
   applicantId: string,
   ip: string,
-  userAgent: string
+  userAgent: string,
+  pdfUrl?: string
 ): Promise<void> {
+  const updateData: any = {
+    contract_signed_at: new Date().toISOString(),
+    contract_ip: ip,
+    contract_user_agent: userAgent,
+  };
+
+  // Adicionar PDF URL se fornecido
+  if (pdfUrl) {
+    updateData.contract_pdf_url = pdfUrl;
+  }
+
   const { error } = await supabase
     .from('applicants')
-    .update({
-      contract_signed_at: new Date().toISOString(),
-      contract_ip: ip,
-      contract_user_agent: userAgent,
-    })
+    .update(updateData)
     .eq('id', applicantId);
 
   if (error) {

@@ -101,16 +101,7 @@ export async function POST(request: NextRequest) {
     // PASSO 3: Marcar contrato como assinado (SÓ DEPOIS de gerar PDF)
     try {
       console.log('[Contract] Marking contract as signed...');
-      await signContract(applicant.id, ip, userAgent);
-      
-      // Atualizar applicant com caminho do PDF (se foi salvo)
-      if (pdfPath) {
-        await supabase
-          .from('applicants')
-          .update({ contract_pdf_path: pdfPath })
-          .eq('id', applicant.id);
-      }
-      
+      await signContract(applicant.id, ip, userAgent, pdfPath || undefined);
       console.log('[Contract] Contract marked as signed');
     } catch (signError) {
       console.error('[Contract] ERROR marking as signed:', signError);
