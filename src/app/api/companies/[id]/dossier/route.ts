@@ -173,6 +173,16 @@ export async function GET(
         created_at: company.created_at,
         updated_at: company.updated_at,
         last_sync_date: company.last_sync_date,
+        // Endereço Enriquecido
+        enriched_street: company.enriched_street,
+        enriched_number: company.enriched_number,
+        enriched_complement: company.enriched_complement,
+        enriched_neighborhood: company.enriched_neighborhood,
+        enriched_city: company.enriched_city,
+        enriched_state: company.enriched_state,
+        enriched_postal_code: company.enriched_postal_code,
+        enriched_source: company.enriched_source,
+        enriched_at: company.enriched_at,
       },
 
       // UBOs (Sócios)
