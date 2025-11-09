@@ -20,7 +20,7 @@ export async function GET(
     // Buscar empresa
     const { data: company, error } = await supabase
       .from('applicants')
-      .select('contract_pdf_path, company_name, external_user_id')
+      .select('contract_pdf_url, company_name, external_user_id')
       .eq('id', id)
       .single();
 
@@ -31,7 +31,7 @@ export async function GET(
       );
     }
 
-    if (!company.contract_pdf_path) {
+    if (!company.contract_pdf_url) {
       return NextResponse.json(
         { error: 'Contrato não encontrado' },
         { status: 404 }
@@ -41,7 +41,7 @@ export async function GET(
     // Baixar PDF do Storage
     const { data: pdfData, error: downloadError } = await supabase.storage
       .from('contracts')
-      .download(company.contract_pdf_path);
+      .download(company.contract_pdf_url);
 
     if (downloadError || !pdfData) {
       console.error('[Contract Download] Error:', downloadError);
