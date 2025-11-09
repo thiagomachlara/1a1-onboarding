@@ -33,7 +33,7 @@ interface CompanyDossier {
     updated_at: string;
     last_sync_date: string;
     contract_signed_at?: string;
-
+    contract_pdf_url?: string;
   };
   ubos: any[];
   documents: any[];
