@@ -16,6 +16,7 @@ import {
 } from '@/lib/supabase-db';
 import { consultarCNPJ, formatarEndereco, formatarTelefone } from '@/lib/brasilapi';
 import { enrichAddress } from '@/lib/address-enrichment';
+import { enriquecerEndereco, formatarEnderecoEnriquecido } from '@/lib/address-enrichment-v2';
 import { getApplicantData, getSummaryReportPDF } from '@/lib/sumsub-api';
 import {
   generateContractToken,
@@ -338,8 +339,13 @@ async function handleApplicantPending(data: any) {
  */
 async function enrichCompanyAddress(applicantId: string, cnpj: string, originalAddress?: string | null) {
   try {
-    console.log(`[Address Enrichment] Starting enrichment for company: ${cnpj}`);
-    const enrichedAddress = await enrichAddress(cnpj, originalAddress || undefined);
+    console.log(`[Address Enrichment V2] Starting enrichment for company: ${cnpj}`);
+    const enrichedAddress = await enriquecerEndereco(cnpj);
+    
+    if (!enrichedAddress) {
+      console.error(`[Address Enrichment V2] Failed to enrich address for CNPJ: ${cnpj}`);
+      return;
+    }
     
     // Atualizar campos enriched_* no banco
     const { createClient } = await import('@supabase/supabase-js');
@@ -351,21 +357,21 @@ async function enrichCompanyAddress(applicantId: string, cnpj: string, originalA
     await supabase
       .from('applicants')
       .update({
-        enriched_street: enrichedAddress.street,
-        enriched_number: enrichedAddress.number,
-        enriched_complement: enrichedAddress.complement,
-        enriched_neighborhood: enrichedAddress.neighborhood,
-        enriched_city: enrichedAddress.city,
-        enriched_state: enrichedAddress.state,
-        enriched_postal_code: enrichedAddress.postal_code,
-        enriched_source: enrichedAddress.source,
+        enriched_street: enrichedAddress.logradouro,
+        enriched_number: enrichedAddress.numero,
+        enriched_complement: enrichedAddress.complemento,
+        enriched_neighborhood: enrichedAddress.bairro,
+        enriched_city: enrichedAddress.cidade,
+        enriched_state: enrichedAddress.estado,
+        enriched_postal_code: enrichedAddress.cep,
+        enriched_source: enrichedAddress.fonte_secundaria || enrichedAddress.fonte_primaria,
         enriched_at: new Date().toISOString(),
       })
       .eq('id', applicantId);
     
-    console.log(`[Address Enrichment] Success:`, enrichedAddress);
+    console.log(`[Address Enrichment V2] Success:`, enrichedAddress);
   } catch (error) {
-    console.error(`[Address Enrichment] Failed:`, error);
+    console.error(`[Address Enrichment V2] Failed:`, error);
     // Não falhar o processo se enriquecimento falhar
   }
 }
