@@ -271,5 +271,6 @@ export default function UsuariosPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

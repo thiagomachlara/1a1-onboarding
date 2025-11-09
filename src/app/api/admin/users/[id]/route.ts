@@ -9,7 +9,7 @@ import { logAdminAction, extractRequestInfo } from '@/lib/admin-audit';
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verificar permissão
@@ -17,13 +17,16 @@ export async function PATCH(
     
     const { full_name, role, is_active } = await request.json();
     
+    // Aguardar params
+    const { id } = await params;
+    
     const supabase = createClient();
     
     // Buscar usuário atual
     const { data: oldUser, error: fetchError } = await supabase
       .from('admin_users')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
     
     if (fetchError || !oldUser) {
@@ -34,7 +37,7 @@ export async function PATCH(
     }
     
     // Não permitir que o usuário desative a si mesmo
-    if (params.id === currentUser.id && is_active === false) {
+    if (id === currentUser.id && is_active === false) {
       return NextResponse.json(
         { error: 'Você não pode desativar sua própria conta' },
         { status: 400 }
@@ -54,7 +57,7 @@ export async function PATCH(
     const { data: updatedUser, error: updateError } = await supabase
       .from('admin_users')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
     
@@ -68,7 +71,7 @@ export async function PATCH(
       adminUserId: currentUser.id,
       action: 'update',
       resourceType: 'user',
-      resourceId: params.id,
+      resourceId: id,
       oldValue: {
         full_name: oldUser.full_name,
         role: oldUser.role,
@@ -102,14 +105,17 @@ export async function PATCH(
  */
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verificar permissão
     const currentUser = await requirePermission({ resource: 'users', action: 'delete' });
     
+    // Aguardar params
+    const { id } = await params;
+    
     // Não permitir que o usuário delete a si mesmo
-    if (params.id === currentUser.id) {
+    if (id === currentUser.id) {
       return NextResponse.json(
         { error: 'Você não pode deletar sua própria conta' },
         { status: 400 }
@@ -122,7 +128,7 @@ export async function DELETE(
     const { data: user, error: fetchError } = await supabase
       .from('admin_users')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
     
     if (fetchError || !user) {
@@ -136,7 +142,7 @@ export async function DELETE(
     const { error: updateError } = await supabase
       .from('admin_users')
       .update({ is_active: false })
-      .eq('id', params.id);
+      .eq('id', id);
     
     if (updateError) {
       throw updateError;
@@ -148,7 +154,7 @@ export async function DELETE(
       adminUserId: currentUser.id,
       action: 'deactivate',
       resourceType: 'user',
-      resourceId: params.id,
+      resourceId: id,
       oldValue: { is_active: true },
       newValue: { is_active: false },
       ipAddress,

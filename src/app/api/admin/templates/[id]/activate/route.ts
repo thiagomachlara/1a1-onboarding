@@ -9,11 +9,14 @@ import { logAdminAction, extractRequestInfo } from '@/lib/admin-audit';
  */
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verificar permissão
     const currentUser = await requirePermission({ resource: 'templates', action: 'edit' });
+    
+    // Aguardar params
+    const { id } = await params;
     
     const supabase = createClient();
     
@@ -21,7 +24,7 @@ export async function POST(
     const { data: template, error: fetchError } = await supabase
       .from('contract_templates')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
     
     if (fetchError || !template) {
@@ -46,7 +49,7 @@ export async function POST(
         activated_at: new Date().toISOString(),
         activated_by: currentUser.id,
       })
-      .eq('id', params.id);
+      .eq('id', id);
     
     if (updateError) {
       throw updateError;
@@ -56,7 +59,7 @@ export async function POST(
     await supabase
       .from('template_change_log')
       .insert({
-        template_id: params.id,
+        template_id: id,
         changed_by: currentUser.id,
         action: 'activated',
         change_summary: `Template ativado: ${template.title}`,
@@ -68,7 +71,7 @@ export async function POST(
       adminUserId: currentUser.id,
       action: 'activate',
       resourceType: 'template',
-      resourceId: params.id,
+      resourceId: id,
       newValue: { is_active: true },
       ipAddress,
       userAgent,
