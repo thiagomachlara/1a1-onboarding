@@ -1,12 +1,14 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
 export default function AdminHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -68,6 +70,42 @@ export default function AdminHeader() {
             </button>
           </div>
         </div>
+      </div>
+      
+      {/* Menu de Navegação */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <nav className="flex space-x-8 py-4 border-t border-gray-100">
+          <Link
+            href="/admin/empresas"
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              pathname?.startsWith('/admin/empresas')
+                ? 'bg-blue-50 text-blue-700'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            📊 Empresas
+          </Link>
+          <Link
+            href="/admin/usuarios"
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              pathname === '/admin/usuarios'
+                ? 'bg-blue-50 text-blue-700'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            👥 Usuários
+          </Link>
+          <Link
+            href="/admin/templates"
+            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+              pathname === '/admin/templates'
+                ? 'bg-blue-50 text-blue-700'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            📝 Templates
+          </Link>
+        </nav>
       </div>
     </header>
   );
