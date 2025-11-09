@@ -183,6 +183,9 @@ export async function GET(
         enriched_postal_code: company.enriched_postal_code,
         enriched_source: company.enriched_source,
         enriched_at: company.enriched_at,
+        // Contrato
+        contract_signed_at: company.contract_signed_at,
+        contract_pdf_url: company.contract_pdf_url,
       },
 
       // UBOs (Sócios)
