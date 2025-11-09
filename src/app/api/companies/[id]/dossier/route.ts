@@ -68,7 +68,7 @@ export async function GET(
         created_at, updated_at, first_verification_at, last_verification_at,
         approved_at, rejected_at, sumsub_level_name, sumsub_review_result,
         rejection_reason, company_name, contract_token, contract_token_expires_at,
-        contract_signed_at, contract_ip, contract_user_agent, contract_pdf_path, contract_pdf_url,
+        contract_signed_at, contract_ip, contract_user_agent, contract_pdf_url,
         wallet_token, wallet_token_expires_at, wallet_pdf_url, refresh_requested_at,
         refresh_status, ubo_name, risk_score, risk_level, risk_factors,
         manual_risk_override, officer_notes, wallet_address, whitelist_status,

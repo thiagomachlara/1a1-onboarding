@@ -33,7 +33,7 @@ interface CompanyDossier {
     updated_at: string;
     last_sync_date: string;
     contract_signed_at?: string;
-    contract_pdf_path?: string;
+
   };
   ubos: any[];
   documents: any[];
@@ -518,7 +518,7 @@ export default function CompanyDossierPage() {
                             Assinado em {new Date(dossier.company.contract_signed_at).toLocaleDateString('pt-BR')} às {new Date(dossier.company.contract_signed_at).toLocaleTimeString('pt-BR')}
                           </p>
                         </div>
-                        {dossier.company.contract_pdf_path && (
+                        {dossier.company.contract_pdf_url && (
                           <a
                             href={`/api/companies/${dossier.company.id}/contract/download`}
                             download
