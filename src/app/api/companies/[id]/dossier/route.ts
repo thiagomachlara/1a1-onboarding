@@ -62,7 +62,18 @@ export async function GET(
     // Buscar empresa no banco com todos os dados
     const { data: company, error: companyError } = await supabase
       .from('applicants')
-      .select('*')
+      .select(`
+        *,
+        enriched_street,
+        enriched_number,
+        enriched_complement,
+        enriched_neighborhood,
+        enriched_city,
+        enriched_state,
+        enriched_postal_code,
+        enriched_source,
+        enriched_at
+      `)
       .eq('id', id)
       .single();
 
