@@ -7,6 +7,7 @@
 
 import { consultarCNPJ, type CNPJData } from './brasilapi';
 import { consultarCEP, type ViaCepData } from './viacep';
+import { normalizeAddress } from './text-normalization';
 
 export interface EnrichedAddress {
   logradouro: string; // Endereço completo com tipo (ex: "RUA XV DE NOVEMBRO")
@@ -61,14 +62,25 @@ export async function enriquecerEndereco(cnpj: string): Promise<EnrichedAddress 
       console.warn(`[Address Enrichment V2] ViaCEP não retornou dados, usando Receita Federal: "${logradouroFinal}"`);
     }
 
-    return {
+    // 4. Normalizar todos os campos para Title Case profissional
+    const normalized = normalizeAddress({
       logradouro: logradouroFinal,
       numero: receitaData.numero,
-      complemento: receitaData.complemento || null,
+      complemento: receitaData.complemento,
       bairro: bairroFinal,
       cidade: receitaData.municipio,
       estado: receitaData.uf,
       cep: receitaData.cep,
+    });
+
+    return {
+      logradouro: normalized.logradouro,
+      numero: normalized.numero,
+      complemento: normalized.complemento,
+      bairro: normalized.bairro,
+      cidade: normalized.cidade,
+      estado: normalized.estado,
+      cep: normalized.cep,
       fonte_primaria: 'receita',
       fonte_secundaria: fonteSecundaria,
     };
