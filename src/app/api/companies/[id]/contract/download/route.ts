@@ -54,8 +54,12 @@ export async function GET(
     // Gerar nome do arquivo
     const fileName = `contrato_${company.company_name || company.external_user_id}_${Date.now()}.pdf`;
 
+    // Converter Blob para Buffer
+    const arrayBuffer = await pdfData.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
     // Retornar PDF
-    return new NextResponse(pdfData, {
+    return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${fileName}"`,
