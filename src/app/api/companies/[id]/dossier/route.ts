@@ -63,16 +63,18 @@ export async function GET(
     const { data: company, error: companyError } = await supabase
       .from('applicants')
       .select(`
-        *,
-        enriched_street,
-        enriched_number,
-        enriched_complement,
-        enriched_neighborhood,
-        enriched_city,
-        enriched_state,
-        enriched_postal_code,
-        enriched_source,
-        enriched_at
+        id, external_user_id, applicant_id, inspection_id, applicant_type,
+        current_status, review_answer, document_number, full_name, email, phone,
+        created_at, updated_at, first_verification_at, last_verification_at,
+        approved_at, rejected_at, sumsub_level_name, sumsub_review_result,
+        rejection_reason, company_name, contract_token, contract_token_expires_at,
+        contract_signed_at, contract_ip, contract_user_agent, contract_pdf_url,
+        wallet_token, wallet_token_expires_at, wallet_pdf_url, refresh_requested_at,
+        refresh_status, ubo_name, risk_score, risk_level, risk_factors,
+        manual_risk_override, officer_notes, wallet_address, whitelist_status,
+        whitelist_pdf_url, last_sync_date, address, city, state, postal_code, country,
+        enriched_street, enriched_number, enriched_complement, enriched_neighborhood,
+        enriched_city, enriched_state, enriched_postal_code, enriched_source, enriched_at
       `)
       .eq('id', id)
       .single();
