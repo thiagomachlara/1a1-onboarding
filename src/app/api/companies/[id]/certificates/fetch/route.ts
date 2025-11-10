@@ -49,7 +49,17 @@ export async function POST(
         result = await fetchCNDFederal(cnpj);
         break;
       case 'CNDT':
-        result = await fetchCNDT(cnpj);
+                // A busca automática da CNDT foi desativada devido à necessidade de resolver um reCAPTCHA.
+        // O sistema agora redireciona o usuário para o site do TST para emissão manual.
+        result = {
+          success: true,
+          status: 'pending',
+          certificateType: certificateType.toUpperCase(),
+          queryData: {
+            manualUrl: `https://www.tst.jus.br/certidao`,
+            note: 'A emissão deste certificado requer interação manual no site do órgão emissor.',
+          },
+        };
         break;
       default:
         return NextResponse.json(

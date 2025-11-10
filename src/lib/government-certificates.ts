@@ -114,44 +114,8 @@ export async function fetchCNDT(cnpj: string): Promise<CertificateResult> {
     // A CNDT pode ser emitida programaticamente via POST request
     // Vamos tentar fazer a requisição direta
     
-    const response = await axios.post(
-      'https://cndt-certidao.tst.jus.br/gerarCertidao.faces',
-      {
-        cnpj: cleanCNPJ,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
-        timeout: 30000, // 30 segundos
-        maxRedirects: 5,
-      }
-    );
-
-    // Se a resposta for um PDF, significa que a certidão foi emitida
-    if (response.headers['content-type']?.includes('application/pdf')) {
-      // Converter PDF para base64 para armazenamento temporário
-      const pdfBuffer = Buffer.from(response.data);
-      const pdfBase64 = pdfBuffer.toString('base64');
-      
-      return {
-        success: true,
-        status: 'valid',
-        certificateType: 'CNDT',
-        issueDate: new Date(),
-        // CNDT tem validade de 180 dias
-        expiryDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
-        queryData: {
-          cnpj: cleanCNPJ,
-          pdfBase64: pdfBase64,
-          pdfSize: pdfBuffer.length,
-          fetchedAt: new Date().toISOString(),
-        },
-      };
-    }
-
-    // Se não for PDF, pode ser uma página HTML com erro ou pendência
+        // A emissão da CNDT requer a resolução de um reCAPTCHA, o que impede a automação completa.
+    // A melhor abordagem é redirecionar o usuário para o site do TST para emissão manual.
     return {
       success: true,
       status: 'pending',
@@ -159,9 +123,11 @@ export async function fetchCNDT(cnpj: string): Promise<CertificateResult> {
       queryData: {
         cnpj: cleanCNPJ,
         manualUrl: 'https://www.tst.jus.br/certidao',
-        note: 'A emissão da CNDT pode requerer validação adicional. Acesse o site do TST para emitir manualmente.',
+        note: 'A emissão da CNDT requer a resolução de um reCAPTCHA no site do TST.',
       },
     };
+
+
   } catch (error: any) {
     console.error('Erro ao buscar CNDT:', error);
     
