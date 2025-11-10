@@ -1,17 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { ExternalLink, FileText, Loader2, RefreshCw } from 'lucide-react';
 
 interface CertificateType {
   id: string;
@@ -76,7 +65,6 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
       const data = await response.json();
 
       if (data.success) {
-        // Recarregar lista de certidões
         await loadCertificates();
         alert(`Certidão emitida com sucesso! Custo: R$ ${data.infosimples.price.toFixed(2)}`);
       } else {
@@ -96,20 +84,20 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
 
   const getStatusBadge = (certificate: Certificate | undefined) => {
     if (!certificate) {
-      return <Badge variant="secondary">Pendente</Badge>;
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">Pendente</span>;
     }
 
     switch (certificate.status) {
       case 'regular':
-        return <Badge variant="default" className="bg-green-500">✅ Regular</Badge>;
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">✅ Regular</span>;
       case 'irregular':
-        return <Badge variant="destructive">❌ Irregular</Badge>;
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">❌ Irregular</span>;
       case 'obtida':
-        return <Badge variant="default">✅ Obtida</Badge>;
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">✅ Obtida</span>;
       case 'error':
-        return <Badge variant="destructive">❌ Erro</Badge>;
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">❌ Erro</span>;
       default:
-        return <Badge variant="secondary">Pendente</Badge>;
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">Pendente</span>;
     }
   };
 
@@ -124,7 +112,7 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>
     );
   }
@@ -134,116 +122,120 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
       {/* Header com contador */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Certidões de Compliance</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Certidões de Compliance</h3>
           <p className="text-sm text-gray-500">
             {obtainedCount} de {totalCount} certidões obtidas
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
+        <button
           onClick={loadCertificates}
           disabled={loading}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
         >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
+          🔄 Atualizar
+        </button>
       </div>
 
       {/* Tabela de certidões */}
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Fonte</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Validade</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <div className="border rounded-lg overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Nome
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Fonte
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Validade
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Ações
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
             {certificateTypes.map((type) => {
               const certificate = getCertificate(type.id);
               const isEmitting = emitting === type.id;
 
               return (
-                <TableRow key={type.id}>
-                  <TableCell>
+                <tr key={type.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="font-medium">{type.name}</div>
+                      <div className="text-sm font-medium text-gray-900">{type.name}</div>
                       <div className="text-sm text-gray-500">{type.description}</div>
                     </div>
-                  </TableCell>
-                  <TableCell>{type.source}</TableCell>
-                  <TableCell>{getStatusBadge(certificate)}</TableCell>
-                  <TableCell>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {type.source}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {getStatusBadge(certificate)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {certificate?.expiry_date
                       ? formatDate(certificate.expiry_date)
                       : certificate?.issue_date
                       ? formatDate(certificate.issue_date)
                       : '-'}
-                  </TableCell>
-                  <TableCell className="text-right">
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
                       {/* Botão Emitir via API */}
                       {type.infosimples_service && (
-                        <Button
-                          size="sm"
-                          variant="default"
+                        <button
                           onClick={() => emitCertificate(type.id)}
                           disabled={isEmitting}
+                          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isEmitting ? (
                             <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              <span className="inline-block animate-spin mr-2">⏳</span>
                               Emitindo...
                             </>
                           ) : (
-                            <>
-                              🤖 Emitir via API
-                            </>
+                            '🤖 Emitir via API'
                           )}
-                        </Button>
+                        </button>
                       )}
 
                       {/* Botão Emitir Manual */}
                       {type.manual_url && (
-                        <Button
-                          size="sm"
-                          variant="outline"
+                        <button
                           onClick={() => window.open(type.manual_url!, '_blank')}
+                          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
                         >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          Emitir Manual
-                        </Button>
+                          🌐 Emitir Manual
+                        </button>
                       )}
 
                       {/* Botão Ver PDF */}
                       {certificate?.pdf_storage_path && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <button
                           onClick={() => {
-                            // TODO: Implementar visualização do PDF
                             alert('Visualização de PDF em desenvolvimento');
                           }}
+                          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
                         >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Ver PDF
-                        </Button>
+                          📄 Ver PDF
+                        </button>
                       )}
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               );
             })}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
 
       {/* Legenda */}
-      <div className="text-sm text-gray-500">
+      <div className="text-sm text-gray-500 space-y-1">
         <p>
           <strong>🤖 Emitir via API:</strong> Emite automaticamente via InfoSimples
         </p>
