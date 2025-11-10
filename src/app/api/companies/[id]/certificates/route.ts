@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { createAdminClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/companies/[id]/certificates
