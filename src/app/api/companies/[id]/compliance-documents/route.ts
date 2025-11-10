@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 
 /**
  * GET /api/companies/[id]/compliance-documents
@@ -17,7 +17,7 @@ export async function GET(
 ) {
   try {
     const { id: companyId } = await params;
-    const supabase = await createClient();
+    const supabase = await createAdminClient();
     
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
@@ -78,7 +78,7 @@ export async function DELETE(
 ) {
   try {
     const { id: companyId } = await params;
-    const supabase = await createClient();
+    const supabase = await createAdminClient();
     const body = await request.json();
     const { documentId } = body;
 
