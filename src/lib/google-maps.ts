@@ -71,8 +71,9 @@ export function getStreetViewUrl(
   const params = new URLSearchParams({
     location: `${lat},${lng}`,
     size: `${width}x${height}`,
-    fov: fov.toString(),
-    pitch: '0',
+    fov: '120',
+    pitch: '-10',
+    source: 'outdoor',
     key: GOOGLE_MAPS_API_KEY,
   });
 
@@ -92,8 +93,10 @@ export function getGoogleMapsLink(
   lat: number,
   lng: number
 ): string {
+  // Use address for better UX, fallback to coordinates if address is empty
+  const query = address || `${lat},${lng}`;
   const params = new URLSearchParams({
-    q: `${lat},${lng}`,
+    q: query,
   });
 
   return `https://www.google.com/maps/search/?api=1&${params.toString()}`;
