@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 /**
  * GET /api/companies/[id]/certificates
@@ -11,8 +11,23 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { id: companyId } = await params;
+
+    // Buscar tipos de certidões para PJ
+    const { data: certificateTypes, error: typesError } = await supabase
+      .from('compliance_certificate_types')
+      .select('*')
+      .eq('entity_type', 'PJ')
+      .order('display_order');
+
+    if (typesError) {
+      console.error('Error fetching certificate types:', typesError);
+      return NextResponse.json(
+        { success: false, error: 'Erro ao buscar tipos de certidões' },
+        { status: 500 }
+      );
+    }
 
     // Buscar certificados da empresa
     const { data: certificates, error } = await supabase
@@ -31,6 +46,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
+      certificateTypes: certificateTypes || [],
       certificates: certificates || [],
     });
   } catch (error: any) {

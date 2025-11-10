@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import GoogleMapsSection from '@/components/compliance/GoogleMapsSection';
 import CertificatesSection from '@/components/compliance/CertificatesSection';
+import { CertificatesChecklist } from '@/components/compliance/certificates/CertificatesChecklist';
 import DocumentsUploadSection from '@/components/compliance/DocumentsUploadSection';
 import toast from 'react-hot-toast';
 
@@ -705,6 +706,10 @@ export default function CompanyDossierPage() {
           {/* Aba Compliance */}
           {activeTab === 'compliance' && (
             <div className="p-6 space-y-8">
+              <CertificatesChecklist companyId={id} />
+              
+              <hr className="border-gray-200" />
+              
               <CertificatesSection companyId={id} />
               
               <hr className="border-gray-200" />
