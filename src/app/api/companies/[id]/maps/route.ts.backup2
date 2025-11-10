@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { getStaticMapUrl, getStreetViewUrl, getGoogleMapsLink, isGoogleMapsConfigured, geocodeAddress } from '@/lib/google-maps';
+import { createClient } from '@/lib/supabase/server';
+import { getStaticMapUrl, getStreetViewUrl, getGoogleMapsLink, isGoogleMapsConfigured } from '@/lib/google-maps';
 
 /**
  * GET /api/companies/[id]/maps
  * 
  * Returns Google Maps URLs for a company's address
- * If coordinates are not available, attempts to geocode the address automatically
  */
 export async function GET(
   request: NextRequest,
@@ -24,10 +23,10 @@ export async function GET(
       );
     }
 
-    // Get company data (including both enriched and original address fields)
+    // Get company data
     const { data: company, error } = await supabase
       .from('applicants')
-      .select('enriched_street, enriched_number, enriched_complement, enriched_neighborhood, enriched_city, enriched_state, enriched_postal_code, enriched_lat, enriched_lng, address, city, state, postal_code')
+      .select('enriched_street, enriched_number, enriched_complement, enriched_neighborhood, enriched_city, enriched_state, enriched_postal_code, enriched_lat, enriched_lng')
       .eq('id', id)
       .single();
 
@@ -38,94 +37,29 @@ export async function GET(
       );
     }
 
-    let lat: number | null = null;
-    let lng: number | null = null;
-    let fullAddress = '';
+    // Build full address
+    const addressParts = [
+      company.enriched_street,
+      company.enriched_number,
+      company.enriched_complement,
+      company.enriched_neighborhood,
+      company.enriched_city,
+      company.enriched_state,
+      company.enriched_postal_code,
+    ].filter(Boolean);
 
-    // Check if we have enriched address data
-    const hasEnrichedAddress = company.enriched_street || company.enriched_city;
-    
-    if (hasEnrichedAddress) {
-      // Build full address from enriched data
-      const addressParts = [
-        company.enriched_street,
-        company.enriched_number,
-        company.enriched_complement,
-        company.enriched_neighborhood,
-        company.enriched_city,
-        company.enriched_state,
-        company.enriched_postal_code,
-      ].filter(Boolean);
-      fullAddress = addressParts.join(', ');
-    } else {
-      // Fallback to original address
-      const addressParts = [
-        company.address,
-        company.city,
-        company.state,
-        company.postal_code,
-        'Brasil'
-      ].filter(Boolean);
-      fullAddress = addressParts.join(', ');
-    }
+    const fullAddress = addressParts.join(', ');
 
     // Check if we have coordinates
-    if (company.enriched_lat && company.enriched_lng) {
-      lat = parseFloat(company.enriched_lat);
-      lng = parseFloat(company.enriched_lng);
-    } else {
-      // No coordinates available - try to geocode
-      console.log('[Maps API] No coordinates found, attempting to geocode:', fullAddress);
-      
-      if (!fullAddress) {
-        return NextResponse.json(
-          { error: 'Company address not available' },
-          { status: 400 }
-        );
-      }
-
-      try {
-        const coordinates = await geocodeAddress(fullAddress);
-        
-        if (coordinates) {
-          lat = coordinates.lat;
-          lng = coordinates.lng;
-          
-          // Save coordinates to database for future use
-          const adminClient = createAdminClient();
-          await adminClient
-            .from('applicants')
-            .update({
-              enriched_lat: lat.toString(),
-              enriched_lng: lng.toString(),
-              enriched_at: new Date().toISOString(),
-            })
-            .eq('id', id);
-          
-          console.log('[Maps API] Successfully geocoded and saved coordinates:', { lat, lng });
-        } else {
-          console.warn('[Maps API] Geocoding returned no results for:', fullAddress);
-          return NextResponse.json(
-            { error: 'Could not geocode company address' },
-            { status: 400 }
-          );
-        }
-      } catch (geocodeError: any) {
-        console.error('[Maps API] Geocoding failed:', geocodeError.message);
-        return NextResponse.json(
-          { error: 'Failed to geocode company address' },
-          { status: 500 }
-        );
-      }
-    }
-
-    // At this point we should have coordinates
-    if (!lat || !lng) {
+    if (!company.enriched_lat || !company.enriched_lng) {
       return NextResponse.json(
         { error: 'Company address coordinates not available' },
         { status: 400 }
       );
     }
+
+    const lat = parseFloat(company.enriched_lat);
+    const lng = parseFloat(company.enriched_lng);
 
     // Generate URLs
     const mapUrl = getStaticMapUrl(fullAddress, lat, lng);
