@@ -159,11 +159,23 @@ export default function CompanyDossierPage() {
   const handleSync = async () => {
     try {
       setSyncing(true);
+      
+      // 1. Sincronizar com Sumsub
       const response = await fetch('/api/admin/update-companies', {
         method: 'POST',
       });
       
       if (response.ok) {
+        // 2. Enriquecer endereço (incluindo geocoding)
+        try {
+          await fetch(`/api/companies/${id}/enrich-address`, {
+            method: 'POST',
+          });
+        } catch (enrichError) {
+          console.error('Erro ao enriquecer endereço:', enrichError);
+        }
+        
+        // 3. Recarregar dados
         await loadDossier();
         await loadDocuments();
       }
