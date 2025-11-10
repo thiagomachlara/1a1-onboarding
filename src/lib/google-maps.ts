@@ -93,10 +93,10 @@ export function getGoogleMapsLink(
   lat: number,
   lng: number
 ): string {
-  // Use address for better UX, fallback to coordinates if address is empty
-  const query = address || `${lat},${lng}`;
+  // Use coordinates for reliable location, as complex addresses may not geocode correctly
+  const query = `${lat},${lng}`;
   const params = new URLSearchParams({
-    q: query,
+    query: query,
   });
 
   return `https://www.google.com/maps/search/?api=1&${params.toString()}`;
