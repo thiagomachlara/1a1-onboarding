@@ -50,7 +50,7 @@ export async function enriquecerEndereco(cnpj: string): Promise<EnrichedAddress 
     let fonteSecundaria: 'viacep' | null = null;
 
     if (viaCepData && viaCepData.logradouro) {
-      // ViaCEP retornou logradouro completo (com tipo)
+      // ViaCEP retornou logradouro completo (com tipo: Rua, Avenida, etc)
       logradouroFinal = viaCepData.logradouro;
       bairroFinal = viaCepData.bairro || receitaData.bairro;
       fonteSecundaria = 'viacep';
@@ -62,11 +62,16 @@ export async function enriquecerEndereco(cnpj: string): Promise<EnrichedAddress 
       console.warn(`[Address Enrichment V2] ViaCEP não retornou dados, usando Receita Federal: "${logradouroFinal}"`);
     }
 
+    // IMPORTANTE: Sempre usar número e complemento da Receita Federal (BrasilAPI)
+    // O ViaCEP retorna complemento genérico (ex: "de 222 a 1344 - lado par")
+    // que não é útil para endereços específicos
+
     // 4. Normalizar todos os campos para Title Case profissional
+    // SEMPRE usar número e complemento da Receita Federal, não do ViaCEP
     const normalized = normalizeAddress({
       logradouro: logradouroFinal,
-      numero: receitaData.numero,
-      complemento: receitaData.complemento,
+      numero: receitaData.numero, // Da BrasilAPI (ex: "850")
+      complemento: receitaData.complemento, // Da BrasilAPI (ex: "CONJ 213...")
       bairro: bairroFinal,
       cidade: receitaData.municipio,
       estado: receitaData.uf,
