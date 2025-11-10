@@ -15,16 +15,16 @@ const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
  * @param address - Full address string
  * @param lat - Latitude
  * @param lng - Longitude
- * @param width - Image width in pixels (default: 600)
+ * @param width - Image width in pixels (default: 1200)
  * @param height - Image height in pixels (default: 400)
- * @param zoom - Zoom level (default: 16)
+ * @param zoom - Zoom level (default: 14)
  * @returns URL string for the static map image
  */
 export function getStaticMapUrl(
   address: string,
   lat: number,
   lng: number,
-  width: number = 600,
+  width: number = 1200,
   height: number = 400,
   zoom: number = 14
 ): string {
@@ -50,8 +50,8 @@ export function getStaticMapUrl(
  * @param address - Full address string
  * @param lat - Latitude
  * @param lng - Longitude
- * @param width - Image width in pixels (default: 600)
- * @param height - Image height in pixels (default: 400)
+ * @param width - Image width in pixels (default: 1200)
+ * @param height - Image height in pixels (default: 600)
  * @param fov - Field of view (default: 90)
  * @returns URL string for the Street View image
  */
@@ -59,8 +59,8 @@ export function getStreetViewUrl(
   address: string,
   lat: number,
   lng: number,
-  width: number = 600,
-  height: number = 400,
+  width: number = 1200,
+  height: number = 600,
   fov: number = 90
 ): string {
   if (!GOOGLE_MAPS_API_KEY) {
