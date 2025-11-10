@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { getStaticMapUrl, getStreetViewUrl, getGoogleMapsLink, isGoogleMapsConfigured, geocodeAddress } from '@/lib/google-maps';
+import { createClient } from '@/lib/supabase/server';
+import { getStaticMapUrl, getStreetViewUrl, getGoogleMapsLink, isGoogleMapsConfigured } from '@/lib/google-maps';
 
 /**
  * GET /api/companies/[id]/maps
  * 
  * Returns Google Maps URLs for a company's address
- * If coordinates are not available, attempts to geocode the address automatically
+ * Uses address directly without geocoding
  */
 export async function GET(
   request: NextRequest,
@@ -24,10 +24,10 @@ export async function GET(
       );
     }
 
-    // Get company data (including both enriched and original address fields)
+    // Get company data
     const { data: company, error } = await supabase
       .from('applicants')
-      .select('enriched_street, enriched_number, enriched_complement, enriched_neighborhood, enriched_city, enriched_state, enriched_postal_code, enriched_lat, enriched_lng, address, city, state, postal_code')
+      .select('enriched_street, enriched_city, enriched_state, enriched_postal_code, address, city, state, postal_code')
       .eq('id', id)
       .single();
 
@@ -38,106 +38,59 @@ export async function GET(
       );
     }
 
-    let lat: number | null = null;
-    let lng: number | null = null;
+    let addressStreet = '';
+    let addressCity = '';
+    let addressState = '';
+    let addressPostalCode = '';
     let fullAddress = '';
 
     // Check if we have enriched address data
     const hasEnrichedAddress = company.enriched_street || company.enriched_city;
     
     if (hasEnrichedAddress) {
-      // Build full address from enriched data
-      const addressParts = [
-        company.enriched_street,
-        company.enriched_number,
-        company.enriched_complement,
-        company.enriched_neighborhood,
-        company.enriched_city,
-        company.enriched_state,
-        company.enriched_postal_code,
-      ].filter(Boolean);
-      fullAddress = addressParts.join(', ');
+      // Use enriched data
+      addressStreet = company.enriched_street || '';
+      addressCity = company.enriched_city || '';
+      addressState = company.enriched_state || '';
+      addressPostalCode = company.enriched_postal_code || '';
+      
+      fullAddress = [
+        addressStreet,
+        addressCity,
+        addressState,
+        addressPostalCode,
+      ].filter(Boolean).join(', ');
     } else {
       // Fallback to original address
-      const addressParts = [
-        company.address,
-        company.city,
-        company.state,
-        company.postal_code,
-        'Brasil'
-      ].filter(Boolean);
-      fullAddress = addressParts.join(', ');
-    }
-
-    // Check if we have coordinates
-    if (company.enriched_lat && company.enriched_lng) {
-      lat = parseFloat(company.enriched_lat);
-      lng = parseFloat(company.enriched_lng);
-    } else {
-      // No coordinates available - try to geocode
-      console.log('[Maps API] No coordinates found, attempting to geocode:', fullAddress);
+      addressStreet = company.address || '';
+      addressCity = company.city || '';
+      addressState = company.state || '';
+      addressPostalCode = company.postal_code || '';
       
-      if (!fullAddress) {
-        return NextResponse.json(
-          { error: 'Company address not available' },
-          { status: 400 }
-        );
-      }
-
-      try {
-        // Use server-side API key for geocoding
-        const serverApiKey = process.env.GOOGLE_MAPS_SERVER_API_KEY;
-        const coordinates = await geocodeAddress(fullAddress, serverApiKey);
-        
-        if (coordinates) {
-          lat = coordinates.lat;
-          lng = coordinates.lng;
-          
-          // Save coordinates to database for future use
-          const adminClient = createAdminClient();
-          await adminClient
-            .from('applicants')
-            .update({
-              enriched_lat: lat.toString(),
-              enriched_lng: lng.toString(),
-              enriched_at: new Date().toISOString(),
-            })
-            .eq('id', id);
-          
-          console.log('[Maps API] Successfully geocoded and saved coordinates:', { lat, lng });
-        } else {
-          console.warn('[Maps API] Geocoding returned no results for:', fullAddress);
-          return NextResponse.json(
-            { error: 'Could not geocode company address' },
-            { status: 400 }
-          );
-        }
-      } catch (geocodeError: any) {
-        console.error('[Maps API] Geocoding failed:', geocodeError.message);
-        return NextResponse.json(
-          { error: 'Failed to geocode company address' },
-          { status: 500 }
-        );
-      }
+      fullAddress = [
+        addressStreet,
+        addressCity,
+        addressState,
+        addressPostalCode,
+        'Brasil'
+      ].filter(Boolean).join(', ');
     }
 
-    // At this point we should have coordinates
-    if (!lat || !lng) {
+    // Validate we have minimum required address data
+    if (!addressStreet || !addressCity) {
       return NextResponse.json(
-        { error: 'Company address coordinates not available' },
+        { error: 'Company address not available' },
         { status: 400 }
       );
     }
 
-    // Generate URLs
-    const mapUrl = getStaticMapUrl(fullAddress, lat, lng);
-    const streetViewUrl = getStreetViewUrl(fullAddress, lat, lng);
-    const mapsLink = getGoogleMapsLink(fullAddress, lat, lng);
+    // Generate URLs using address directly (no geocoding needed!)
+    const mapUrl = getStaticMapUrl(addressStreet, addressCity, addressState, addressPostalCode);
+    const streetViewUrl = getStreetViewUrl(addressStreet, addressCity, addressState, addressPostalCode);
+    const mapsLink = getGoogleMapsLink(addressStreet, addressCity, addressState, addressPostalCode);
 
     return NextResponse.json({
       address: fullAddress,
-      lat,
-      lng,
       mapUrl,
       streetViewUrl,
       mapsLink,
