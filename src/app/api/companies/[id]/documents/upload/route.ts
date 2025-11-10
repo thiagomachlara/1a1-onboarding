@@ -119,21 +119,18 @@ export async function POST(
       .from('compliance_documents')
       .insert({
         company_id: companyId,
-        document_name: file.name,
         document_type: documentType,
-        document_category: documentCategory,
-        description: description || null,
-        file_url: urlData.publicUrl,
-        file_storage_path: storagePath,
+        category: documentCategory,
         file_name: sanitizedFileName,
         file_size: file.size,
-        file_type: file.type,
+        file_url: urlData.publicUrl,
+        storage_path: storagePath,
+        mime_type: file.type,
         issue_date: issueDate || null,
         expiry_date: expiryDate || null,
-        document_number: documentNumber || null,
+        notes: description || null,
         tags: tags.length > 0 ? tags : null,
         version: 1,
-        is_current_version: true,
       })
       .select()
       .single();
