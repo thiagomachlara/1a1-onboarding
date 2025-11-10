@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 
 /**
  * POST /api/companies/[id]/documents/upload
@@ -22,7 +22,7 @@ export async function POST(
 ) {
   try {
     const { id: companyId } = await params;
-    const supabase = await createClient();
+    const supabase = await createAdminClient();
 
     // Parse form data
     const formData = await request.formData();
