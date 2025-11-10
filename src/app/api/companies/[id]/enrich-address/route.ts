@@ -29,7 +29,7 @@ export async function POST(
     // Buscar dados da empresa
     const { data: applicant, error: fetchError } = await supabase
       .from('applicants')
-      .select('id, document_number, address, applicant_type')
+      .select('id, document_number, address, applicant_type, city, state, postal_code')
       .eq('id', id)
       .single();
 
@@ -56,47 +56,85 @@ export async function POST(
       );
     }
 
-    // Enriquecer endereço
-    const enrichedAddress = await enrichAddress(
-      applicant.document_number,
-      applicant.address || undefined
-    );
+    let enrichedAddress: any = null;
+    let addressForGeocoding = '';
 
-    // Montar endereço completo para geocoding
-    const fullAddress = [
-      enrichedAddress.street,
-      enrichedAddress.number,
-      enrichedAddress.neighborhood,
-      enrichedAddress.city,
-      enrichedAddress.state,
-      enrichedAddress.postal_code
-    ].filter(Boolean).join(', ');
+    // Tentar enriquecer endereço (BrasilAPI/ViaCEP)
+    try {
+      enrichedAddress = await enrichAddress(
+        applicant.document_number,
+        applicant.address || undefined
+      );
+
+      // Montar endereço completo para geocoding
+      addressForGeocoding = [
+        enrichedAddress.street,
+        enrichedAddress.number,
+        enrichedAddress.neighborhood,
+        enrichedAddress.city,
+        enrichedAddress.state,
+        enrichedAddress.postal_code
+      ].filter(Boolean).join(', ');
+
+      console.log('[Enrich Address] Successfully enriched address from API');
+    } catch (enrichError: any) {
+      console.warn('[Enrich Address] Failed to enrich from API, using original address:', enrichError.message);
+      
+      // Fallback: usar endereço original do Sumsub
+      addressForGeocoding = [
+        applicant.address,
+        applicant.city,
+        applicant.state,
+        applicant.postal_code,
+        'Brasil'
+      ].filter(Boolean).join(', ');
+
+      console.log('[Enrich Address] Using original address for geocoding:', addressForGeocoding);
+    }
 
     // Buscar coordenadas via Google Geocoding API
-    const coordinates = await geocodeAddress(fullAddress);
-    
+    let coordinates = null;
+    if (addressForGeocoding) {
+      try {
+        coordinates = await geocodeAddress(addressForGeocoding);
+        if (coordinates) {
+          console.log('[Enrich Address] Successfully geocoded:', coordinates);
+        } else {
+          console.warn('[Enrich Address] Geocoding returned no results');
+        }
+      } catch (geoError: any) {
+        console.error('[Enrich Address] Geocoding failed:', geoError.message);
+      }
+    }
+
+    // Preparar dados para atualização
+    const updateData: any = {
+      enriched_at: new Date().toISOString(),
+    };
+
+    // Se conseguiu enriquecer via API, salvar os dados enriquecidos
+    if (enrichedAddress) {
+      updateData.enriched_street = enrichedAddress.street;
+      updateData.enriched_number = enrichedAddress.number;
+      updateData.enriched_complement = enrichedAddress.complement;
+      updateData.enriched_neighborhood = enrichedAddress.neighborhood;
+      updateData.enriched_city = enrichedAddress.city;
+      updateData.enriched_state = enrichedAddress.state;
+      updateData.enriched_postal_code = enrichedAddress.postal_code;
+      updateData.enriched_source = enrichedAddress.source;
+    }
+
+    // Se conseguiu coordenadas, salvar
     if (coordinates) {
-      enrichedAddress.lat = coordinates.lat;
-      enrichedAddress.lng = coordinates.lng;
+      updateData.enriched_lat = coordinates.lat?.toString() || null;
+      updateData.enriched_lng = coordinates.lng?.toString() || null;
     }
 
     // Atualizar no banco usando admin client para bypass RLS
     const adminClient = createAdminClient();
     const { error: updateError } = await adminClient
       .from('applicants')
-      .update({
-        enriched_street: enrichedAddress.street,
-        enriched_number: enrichedAddress.number,
-        enriched_complement: enrichedAddress.complement,
-        enriched_neighborhood: enrichedAddress.neighborhood,
-        enriched_city: enrichedAddress.city,
-        enriched_state: enrichedAddress.state,
-        enriched_postal_code: enrichedAddress.postal_code,
-        enriched_lat: enrichedAddress.lat?.toString() || null,
-        enriched_lng: enrichedAddress.lng?.toString() || null,
-        enriched_source: enrichedAddress.source,
-        enriched_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id);
 
     if (updateError) {
@@ -106,6 +144,8 @@ export async function POST(
     return NextResponse.json({
       success: true,
       enriched_address: enrichedAddress,
+      coordinates: coordinates,
+      used_original_address: !enrichedAddress,
     });
   } catch (error: any) {
     console.error('Error enriching address:', error);
