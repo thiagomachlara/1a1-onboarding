@@ -38,27 +38,14 @@ export async function GET(
       );
     }
 
-    let addressStreet = '';
-    let addressCity = '';
-    let addressState = '';
-    let addressPostalCode = '';
-
-    // Check if we have enriched address data, otherwise use original
-    const hasEnrichedAddress = company.enriched_street || company.enriched_city;
+    // Always use original address for street to preserve street numbers
+    // enriched_street may have been processed incorrectly and lost the number
+    const addressStreet = company.address || '';
     
-    if (hasEnrichedAddress) {
-      // Use enriched data
-      addressStreet = company.enriched_street || '';
-      addressCity = company.enriched_city || '';
-      addressState = company.enriched_state || '';
-      addressPostalCode = company.enriched_postal_code || '';
-    } else {
-      // Fallback to original address
-      addressStreet = company.address || '';
-      addressCity = company.city || '';
-      addressState = company.state || '';
-      addressPostalCode = company.postal_code || '';
-    }
+    // Use enriched data for city, state, and postal code if available
+    const addressCity = company.enriched_city || company.city || '';
+    const addressState = company.enriched_state || company.state || '';
+    const addressPostalCode = company.enriched_postal_code || company.postal_code || '';
 
     // Use simplifyAddress to properly format the full address for display
     // This ensures street numbers are preserved while removing complex details
