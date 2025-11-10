@@ -170,6 +170,7 @@ export default function CompanyDossierPage() {
         try {
           await fetch(`/api/companies/${id}/enrich-address`, {
             method: 'POST',
+            credentials: 'include',
           });
         } catch (enrichError) {
           console.error('Erro ao enriquecer endereço:', enrichError);
