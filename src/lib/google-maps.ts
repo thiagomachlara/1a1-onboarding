@@ -117,8 +117,13 @@ export function isGoogleMapsConfigured(): boolean {
  * @param address - Full address string
  * @returns Object with lat and lng, or null if geocoding fails
  */
-export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
-  if (!GOOGLE_MAPS_API_KEY) {
+export async function geocodeAddress(
+  address: string,
+  apiKey?: string
+): Promise<{ lat: number; lng: number } | null> {
+  const key = apiKey || GOOGLE_MAPS_API_KEY;
+  
+  if (!key) {
     console.warn('Google Maps API Key not configured');
     return null;
   }
@@ -126,7 +131,7 @@ export async function geocodeAddress(address: string): Promise<{ lat: number; ln
   try {
     const params = new URLSearchParams({
       address: address,
-      key: GOOGLE_MAPS_API_KEY,
+      key: key,
     });
 
     const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`);

@@ -15,6 +15,7 @@
     "@types/crypto-js": "^4.2.2",
     "axios": "^1.13.2",
     "crypto-js": "^4.2.0",
+    "dotenv": "^17.2.3",
     "jspdf": "^3.0.3",
     "next": "16.0.1",
     "pdf-lib": "^1.17.1",

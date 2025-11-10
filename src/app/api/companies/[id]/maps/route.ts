@@ -85,7 +85,9 @@ export async function GET(
       }
 
       try {
-        const coordinates = await geocodeAddress(fullAddress);
+        // Use server-side API key for geocoding
+        const serverApiKey = process.env.GOOGLE_MAPS_SERVER_API_KEY;
+        const coordinates = await geocodeAddress(fullAddress, serverApiKey);
         
         if (coordinates) {
           lat = coordinates.lat;
