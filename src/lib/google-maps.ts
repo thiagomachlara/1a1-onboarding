@@ -65,6 +65,7 @@ export function getStaticMapUrl(
     center: simplifiedAddress,
     zoom: zoom.toString(),
     size: `${width}x${height}`,
+    scale: '2',  // Double resolution for better quality
     markers: `color:red|${simplifiedAddress}`,
     key: GOOGLE_MAPS_API_KEY,
   });

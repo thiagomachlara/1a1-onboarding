@@ -142,10 +142,10 @@ export default function GoogleMapsSection({ companyId }: GoogleMapsSectionProps)
               <img
                 src={mapsData.streetViewUrl}
                 alt="Fachada do endereço"
-                className="w-full h-64 object-cover"
+                className="w-full h-[600px] object-cover"
               />
             ) : (
-              <div className="w-full h-64 bg-gray-100 flex items-center justify-center">
+              <div className="w-full h-[600px] bg-gray-100 flex items-center justify-center">
                 <p className="text-gray-500">Street View não disponível</p>
               </div>
             )}
