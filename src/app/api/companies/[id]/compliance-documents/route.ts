@@ -29,20 +29,16 @@ export async function GET(
       .from('compliance_documents')
       .select('*')
       .eq('company_id', companyId)
-      .is('deleted_at', null)
+      .eq('status', 'active')
       .order('uploaded_at', { ascending: false });
 
     // Filtros opcionais
     if (category) {
-      query = query.eq('document_category', category);
+      query = query.eq('category', category);
     }
 
     if (type) {
       query = query.eq('document_type', type);
-    }
-
-    if (!includeOldVersions) {
-      query = query.eq('is_current_version', true);
     }
 
     const { data: documents, error } = await query;
@@ -114,10 +110,10 @@ export async function DELETE(
       );
     }
 
-    // Soft delete
+    // Soft delete (mudar status para archived)
     const { error: deleteError } = await supabase
       .from('compliance_documents')
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ status: 'archived' })
       .eq('id', documentId);
 
     if (deleteError) {
