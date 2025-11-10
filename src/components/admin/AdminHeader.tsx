@@ -14,7 +14,7 @@ export default function AdminHeader() {
 
   useEffect(() => {
     const loadUser = async () => {
-      const supabase = createClient();
+      const supabase = await createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.email) {
         setUserEmail(user.email);
@@ -26,7 +26,7 @@ export default function AdminHeader() {
   const handleLogout = async () => {
     setLoading(true);
     try {
-      const supabase = createClient();
+      const supabase = await createClient();
       await supabase.auth.signOut();
       router.push('/admin/login');
       router.refresh();

@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Atualizar banco de dados
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error: updateError } = await supabase
       .from('applicants')
       .update({
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Buscar empresas aprovadas há mais de 180 dias
     const { data: applicants, error } = await supabase

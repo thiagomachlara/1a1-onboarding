@@ -18,7 +18,7 @@ export async function POST(
     // Aguardar params
     const { id } = await params;
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Buscar template
     const { data: template, error: fetchError } = await supabase

@@ -20,7 +20,7 @@ export async function PATCH(
     // Aguardar params
     const { id } = await params;
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Buscar usuário atual
     const { data: oldUser, error: fetchError } = await supabase
@@ -122,7 +122,7 @@ export async function DELETE(
       );
     }
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Buscar usuário
     const { data: user, error: fetchError } = await supabase

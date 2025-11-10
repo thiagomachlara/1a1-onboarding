@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type');
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     let query = supabase
       .from('contract_templates')
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       );
     }
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Buscar última versão
     const { data: lastVersion } = await supabase

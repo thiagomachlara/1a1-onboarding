@@ -23,7 +23,7 @@ export async function GET(
     }
 
     // Buscar URL completa no banco de dados
-    const supabase = createClient();
+    const supabase = await createClient();
     
     const { data, error } = await supabase
       .from('pdf_short_links')

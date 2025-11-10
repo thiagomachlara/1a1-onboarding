@@ -45,7 +45,7 @@ export default function EmpresasPage() {
   const loadApplicants = async () => {
     try {
       setLoading(true);
-      const supabase = createClient();
+      const supabase = await createClient();
 
       const { data, error } = await supabase
         .from('applicants')

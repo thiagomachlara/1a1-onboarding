@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     // Verificar permissão
     await requirePermission({ resource: 'users', action: 'view' });
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Buscar todos os usuários
     const { data: users, error } = await supabase

@@ -17,7 +17,7 @@ export interface AdminUser {
  * Busca o usuário admin atual da sessão
  */
 export async function getCurrentAdminUser(): Promise<AdminUser | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // Buscar usuário autenticado
   const { data: { user } } = await supabase.auth.getUser();
@@ -44,7 +44,7 @@ export async function checkPermission(
   userId: string,
   permission: Permission
 ): Promise<boolean> {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   // Buscar role do usuário
   const { data: user } = await supabase

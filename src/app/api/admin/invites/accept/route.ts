@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       );
     }
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Buscar convite
     const { data: invite, error: inviteError } = await supabase

@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       );
     }
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Verificar se usuário já existe
     const { data: existingUser } = await supabase

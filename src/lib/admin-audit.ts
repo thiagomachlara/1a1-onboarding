@@ -26,7 +26,7 @@ export async function logAdminAction(params: AuditLogParams): Promise<void> {
     userAgent,
   } = params;
   
-  const supabase = createClient();
+  const supabase = await createClient();
   
   try {
     await supabase
@@ -76,7 +76,7 @@ export async function getAuditLogs(params: {
   limit?: number;
   offset?: number;
 }) {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   let query = supabase
     .from('admin_audit_log')

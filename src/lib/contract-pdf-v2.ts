@@ -17,7 +17,7 @@ export async function generateContractPDF(data: ContractData): Promise<Uint8Arra
   const { applicant, signedAt, ip, userAgent } = data;
   
   // Buscar template ativo
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: template, error } = await supabase
     .from('contract_templates')
     .select('content')
