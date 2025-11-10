@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
-import GoogleMapsSection from '@/components/GoogleMapsSection';
+import GoogleMapsSection from '@/components/compliance/GoogleMapsSection';
 import CertificatesSection from '@/components/compliance/CertificatesSection';
 import toast from 'react-hot-toast';
 
