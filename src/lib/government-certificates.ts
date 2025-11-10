@@ -109,13 +109,13 @@ export async function fetchCNDT(cnpj: string): Promise<CertificateResult> {
     }
 
     // Endpoint do TST para emissão de CNDT
-    // URL: https://www.tst.jus.br/certidao/-/certidao/emitir/pj
+    // URL: https://cndt-certidao.tst.jus.br/gerarCertidao.faces
     
     // A CNDT pode ser emitida programaticamente via POST request
     // Vamos tentar fazer a requisição direta
     
     const response = await axios.post(
-      'https://www.tst.jus.br/certidao/-/certidao/emitir/pj',
+      'https://cndt-certidao.tst.jus.br/gerarCertidao.faces',
       {
         cnpj: cleanCNPJ,
       },
