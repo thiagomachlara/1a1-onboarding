@@ -26,7 +26,7 @@ export function getStaticMapUrl(
   lng: number,
   width: number = 600,
   height: number = 400,
-  zoom: number = 16
+  zoom: number = 14
 ): string {
   if (!GOOGLE_MAPS_API_KEY) {
     console.warn('Google Maps API Key not configured');
@@ -71,8 +71,8 @@ export function getStreetViewUrl(
   const params = new URLSearchParams({
     location: `${lat},${lng}`,
     size: `${width}x${height}`,
-    fov: '120',
-    pitch: '-10',
+    fov: '90',
+    pitch: '0',
     source: 'outdoor',
     key: GOOGLE_MAPS_API_KEY,
   });
