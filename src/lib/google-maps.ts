@@ -26,8 +26,8 @@ function simplifyAddress(
   postalCode: string
 ): string {
   // Extract street name and number (remove details like Conj, Andar, Cond, etc.)
-  const streetMatch = address.match(/^([^,]+?)(?:,|\s+-)?\s*(?:Conj|Andar|Cond|Bloco|Torre|Sala)/i);
-  const street = streetMatch ? streetMatch[1].trim() : address.split(',')[0].trim();
+  const streetMatch = address.match(/^(.+?)\s*-?\s*(?:Conj|Andar|Cond|Bloco|Torre|Sala)/i);
+  const street = streetMatch ? streetMatch[1].trim() : address.split(',').slice(0, 2).join(',').trim();
   
   // Build simplified address: Street, City, State PostalCode
   return `${street}, ${city}, ${state} ${postalCode}`;
