@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getStaticMapUrl, getStreetViewUrl, getGoogleMapsLink, isGoogleMapsConfigured } from '@/lib/google-maps';
+import { getStaticMapUrl, getStreetViewUrl, getGoogleMapsLink, isGoogleMapsConfigured, simplifyAddress } from '@/lib/google-maps';
 
 /**
  * GET /api/companies/[id]/maps
@@ -42,9 +42,8 @@ export async function GET(
     let addressCity = '';
     let addressState = '';
     let addressPostalCode = '';
-    let fullAddress = '';
 
-    // Check if we have enriched address data
+    // Check if we have enriched address data, otherwise use original
     const hasEnrichedAddress = company.enriched_street || company.enriched_city;
     
     if (hasEnrichedAddress) {
@@ -53,28 +52,17 @@ export async function GET(
       addressCity = company.enriched_city || '';
       addressState = company.enriched_state || '';
       addressPostalCode = company.enriched_postal_code || '';
-      
-      fullAddress = [
-        addressStreet,
-        addressCity,
-        addressState,
-        addressPostalCode,
-      ].filter(Boolean).join(', ');
     } else {
       // Fallback to original address
       addressStreet = company.address || '';
       addressCity = company.city || '';
       addressState = company.state || '';
       addressPostalCode = company.postal_code || '';
-      
-      fullAddress = [
-        addressStreet,
-        addressCity,
-        addressState,
-        addressPostalCode,
-        'Brasil'
-      ].filter(Boolean).join(', ');
     }
+
+    // Use simplifyAddress to properly format the full address for display
+    // This ensures street numbers are preserved while removing complex details
+    const fullAddress = simplifyAddress(addressStreet, addressCity, addressState, addressPostalCode);
 
     // Validate we have minimum required address data
     if (!addressStreet || !addressCity) {

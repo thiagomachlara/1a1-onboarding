@@ -19,7 +19,7 @@ const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
  * @param postalCode - Postal code
  * @returns Simplified address string
  */
-function simplifyAddress(
+export function simplifyAddress(
   address: string,
   city: string,
   state: string,
