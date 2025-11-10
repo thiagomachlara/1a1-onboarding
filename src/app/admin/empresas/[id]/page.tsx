@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
 import GoogleMapsSection from '@/components/GoogleMapsSection';
+import CertificatesSection from '@/components/compliance/CertificatesSection';
 import toast from 'react-hot-toast';
 
 interface CompanyDossier {
@@ -327,6 +328,7 @@ export default function CompanyDossierPage() {
     { id: 'cadastro', name: 'Cadastro', icon: '🏢' },
     { id: 'ubos', name: 'UBOs', icon: '👥', count: dossier.ubos.length },
     { id: 'documentos', name: 'Documentos', icon: '📄', count: documents.length },
+    { id: 'compliance', name: 'Compliance', icon: '✅' },
     { id: 'risco', name: 'Risco', icon: '⚠️' },
     { id: 'blockchain', name: 'Blockchain', icon: '💼' },
     { id: 'notas', name: 'Notas', icon: '📝', count: dossier.notes.length },
@@ -683,6 +685,13 @@ export default function CompanyDossierPage() {
               <div className="mt-8">
                 <GoogleMapsSection companyId={id} />
               </div>
+            </div>
+          )}
+
+          {/* Aba Compliance */}
+          {activeTab === 'compliance' && (
+            <div className="p-6">
+              <CertificatesSection companyId={id} />
             </div>
           )}
 
