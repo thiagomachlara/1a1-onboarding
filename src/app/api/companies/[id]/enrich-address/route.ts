@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { enrichAddress } from '@/lib/address-enrichment';
-import { geocodeAddress } from '@/lib/google-maps';
+
 
 /**
  * POST /api/companies/[id]/enrich-address
@@ -57,7 +57,6 @@ export async function POST(
     }
 
     let enrichedAddress: any = null;
-    let addressForGeocoding = '';
 
     // Tentar enriquecer endereço (BrasilAPI/ViaCEP)
     try {
@@ -66,46 +65,13 @@ export async function POST(
         applicant.address || undefined
       );
 
-      // Montar endereço completo para geocoding
-      addressForGeocoding = [
-        enrichedAddress.street,
-        enrichedAddress.number,
-        enrichedAddress.neighborhood,
-        enrichedAddress.city,
-        enrichedAddress.state,
-        enrichedAddress.postal_code
-      ].filter(Boolean).join(', ');
-
       console.log('[Enrich Address] Successfully enriched address from API');
     } catch (enrichError: any) {
-      console.warn('[Enrich Address] Failed to enrich from API, using original address:', enrichError.message);
-      
-      // Fallback: usar endereço original do Sumsub
-      addressForGeocoding = [
-        applicant.address,
-        applicant.city,
-        applicant.state,
-        applicant.postal_code,
-        'Brasil'
-      ].filter(Boolean).join(', ');
-
-      console.log('[Enrich Address] Using original address for geocoding:', addressForGeocoding);
+      console.warn('[Enrich Address] Failed to enrich from API:', enrichError.message);
     }
 
-    // Buscar coordenadas via Google Geocoding API
-    let coordinates = null;
-    if (addressForGeocoding) {
-      try {
-        coordinates = await geocodeAddress(addressForGeocoding);
-        if (coordinates) {
-          console.log('[Enrich Address] Successfully geocoded:', coordinates);
-        } else {
-          console.warn('[Enrich Address] Geocoding returned no results');
-        }
-      } catch (geoError: any) {
-        console.error('[Enrich Address] Geocoding failed:', geoError.message);
-      }
-    }
+    // Note: Geocoding is no longer performed here.
+    // Maps API now uses address directly without coordinates.
 
     // Preparar dados para atualização
     const updateData: any = {
@@ -124,11 +90,7 @@ export async function POST(
       updateData.enriched_source = enrichedAddress.source;
     }
 
-    // Se conseguiu coordenadas, salvar
-    if (coordinates) {
-      updateData.enriched_lat = coordinates.lat?.toString() || null;
-      updateData.enriched_lng = coordinates.lng?.toString() || null;
-    }
+
 
     // Atualizar no banco usando admin client para bypass RLS
     const adminClient = createAdminClient();
@@ -144,7 +106,6 @@ export async function POST(
     return NextResponse.json({
       success: true,
       enriched_address: enrichedAddress,
-      coordinates: coordinates,
       used_original_address: !enrichedAddress,
     });
   } catch (error: any) {
