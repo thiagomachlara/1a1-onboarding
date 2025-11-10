@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { enrichAddress } from '@/lib/address-enrichment';
+import { geocodeAddress } from '@/lib/google-maps';
 
 /**
  * POST /api/companies/[id]/enrich-address
@@ -61,6 +62,24 @@ export async function POST(
       applicant.address || undefined
     );
 
+    // Montar endereço completo para geocoding
+    const fullAddress = [
+      enrichedAddress.street,
+      enrichedAddress.number,
+      enrichedAddress.neighborhood,
+      enrichedAddress.city,
+      enrichedAddress.state,
+      enrichedAddress.postal_code
+    ].filter(Boolean).join(', ');
+
+    // Buscar coordenadas via Google Geocoding API
+    const coordinates = await geocodeAddress(fullAddress);
+    
+    if (coordinates) {
+      enrichedAddress.lat = coordinates.lat;
+      enrichedAddress.lng = coordinates.lng;
+    }
+
     // Atualizar no banco
     const { error: updateError } = await supabase
       .from('applicants')
@@ -72,6 +91,8 @@ export async function POST(
         enriched_city: enrichedAddress.city,
         enriched_state: enrichedAddress.state,
         enriched_postal_code: enrichedAddress.postal_code,
+        enriched_lat: enrichedAddress.lat?.toString() || null,
+        enriched_lng: enrichedAddress.lng?.toString() || null,
         enriched_source: enrichedAddress.source,
         enriched_at: new Date().toISOString(),
       })

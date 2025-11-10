@@ -107,3 +107,40 @@ export function getGoogleMapsLink(
 export function isGoogleMapsConfigured(): boolean {
   return !!GOOGLE_MAPS_API_KEY && GOOGLE_MAPS_API_KEY.length > 0;
 }
+
+/**
+ * Geocodes an address to get latitude and longitude
+ * 
+ * @param address - Full address string
+ * @returns Object with lat and lng, or null if geocoding fails
+ */
+export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+  if (!GOOGLE_MAPS_API_KEY) {
+    console.warn('Google Maps API Key not configured');
+    return null;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      address: address,
+      key: GOOGLE_MAPS_API_KEY,
+    });
+
+    const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`);
+    const data = await response.json();
+
+    if (data.status === 'OK' && data.results && data.results.length > 0) {
+      const location = data.results[0].geometry.location;
+      return {
+        lat: location.lat,
+        lng: location.lng,
+      };
+    }
+
+    console.warn('Geocoding failed:', data.status);
+    return null;
+  } catch (error) {
+    console.error('Error geocoding address:', error);
+    return null;
+  }
+}

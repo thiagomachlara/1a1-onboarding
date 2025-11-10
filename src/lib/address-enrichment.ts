@@ -61,6 +61,8 @@ export interface EnrichedAddress {
   state: string;
   postal_code: string;
   source: 'brasilapi' | 'viacep';
+  lat?: number;
+  lng?: number;
 }
 
 /**
