@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { enrichAddress } from '@/lib/address-enrichment';
 import { geocodeAddress } from '@/lib/google-maps';
 
@@ -80,8 +80,9 @@ export async function POST(
       enrichedAddress.lng = coordinates.lng;
     }
 
-    // Atualizar no banco
-    const { error: updateError } = await supabase
+    // Atualizar no banco usando admin client para bypass RLS
+    const adminClient = createAdminClient();
+    const { error: updateError } = await adminClient
       .from('applicants')
       .update({
         enriched_street: enrichedAddress.street,

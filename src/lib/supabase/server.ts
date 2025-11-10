@@ -1,19 +1,20 @@
 import { createServerClient } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
 /**
  * Cria cliente Supabase para uso server-side com Next.js App Router
- * Usa service role key para bypass RLS
+ * Usa autenticação de usuário via cookies
  */
 export async function createClient() {
   const cookieStore = await cookies();
   
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   
   return createServerClient(
     supabaseUrl,
-    supabaseServiceKey,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -33,4 +34,20 @@ export async function createClient() {
       },
     }
   );
+}
+
+/**
+ * Cria cliente Supabase administrativo com service role key
+ * Bypassa Row Level Security (RLS) - use com cuidado!
+ */
+export function createAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  
+  return createSupabaseClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
 }
