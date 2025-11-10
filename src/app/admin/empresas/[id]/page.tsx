@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AdminHeader from '@/components/admin/AdminHeader';
+import GoogleMapsSection from '@/components/GoogleMapsSection';
 import toast from 'react-hot-toast';
 
 interface CompanyDossier {
@@ -677,6 +678,11 @@ export default function CompanyDossierPage() {
                   ))}
                 </div>
               )}
+              
+              {/* Google Maps Section */}
+              <div className="mt-8">
+                <GoogleMapsSection companyId={id} />
+              </div>
             </div>
           )}
 
