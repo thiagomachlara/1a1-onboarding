@@ -38,10 +38,11 @@ const DOCUMENT_TYPES = [
 ];
 
 const DOCUMENT_CATEGORIES = [
-  { value: 'certificate', label: 'Certificado' },
-  { value: 'financial', label: 'Financeiro' },
-  { value: 'legal', label: 'Jurídico' },
-  { value: 'other', label: 'Outro' },
+  { value: 'certificado', label: 'Certificado' },
+  { value: 'documento_pessoal', label: 'Documento Pessoal' },
+  { value: 'documento_empresa', label: 'Documento Empresa' },
+  { value: 'contrato', label: 'Contrato' },
+  { value: 'outros', label: 'Outros' },
 ];
 
 export default function DocumentsUploadSection({ companyId }: DocumentsUploadSectionProps) {
