@@ -26,7 +26,7 @@ export async function GET(
     // Get company data
     const { data: company, error } = await supabase
       .from('applicants')
-      .select('enriched_street, enriched_number, enriched_complement, enriched_neighborhood, enriched_city, enriched_state, enriched_zip, enriched_lat, enriched_lng')
+      .select('enriched_street, enriched_number, enriched_complement, enriched_neighborhood, enriched_city, enriched_state, enriched_postal_code, enriched_lat, enriched_lng')
       .eq('id', id)
       .single();
 
@@ -45,7 +45,7 @@ export async function GET(
       company.enriched_neighborhood,
       company.enriched_city,
       company.enriched_state,
-      company.enriched_zip,
+      company.enriched_postal_code,
     ].filter(Boolean);
 
     const fullAddress = addressParts.join(', ');
