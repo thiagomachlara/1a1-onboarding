@@ -5,16 +5,15 @@ import toast from 'react-hot-toast';
 
 interface ComplianceDocument {
   id: string;
-  document_name: string;
+  file_name: string;
   document_type: string;
-  document_category: string;
-  description?: string;
+  category: string;
+  notes?: string;
   file_url: string;
   file_size: number;
-  file_type: string;
+  mime_type: string;
   issue_date?: string;
   expiry_date?: string;
-  document_number?: string;
   tags?: string[];
   version: number;
   uploaded_at: string;
@@ -211,20 +210,22 @@ export default function DocumentsUploadSection({ companyId }: DocumentsUploadSec
 
   const getCategoryBadgeColor = (category: string): string => {
     const colors: Record<string, string> = {
-      certificate: 'bg-green-100 text-green-800 border-green-300',
-      financial: 'bg-blue-100 text-blue-800 border-blue-300',
-      legal: 'bg-purple-100 text-purple-800 border-purple-300',
-      other: 'bg-gray-100 text-gray-800 border-gray-300',
+      certificado: 'bg-green-100 text-green-800 border-green-300',
+      documento_pessoal: 'bg-blue-100 text-blue-800 border-blue-300',
+      documento_empresa: 'bg-purple-100 text-purple-800 border-purple-300',
+      contrato: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+      outros: 'bg-gray-100 text-gray-800 border-gray-300',
     };
-    return colors[category] || colors.other;
+    return colors[category] || colors.outros;
   };
 
   const getCategoryLabel = (category: string): string => {
     const labels: Record<string, string> = {
-      certificate: 'Certificado',
-      financial: 'Financeiro',
-      legal: 'Jurídico',
-      other: 'Outro',
+      certificado: 'Certificado',
+      documento_pessoal: 'Documento Pessoal',
+      documento_empresa: 'Documento Empresa',
+      contrato: 'Contrato',
+      outros: 'Outros',
     };
     return labels[category] || category;
   };
@@ -454,16 +455,16 @@ export default function DocumentsUploadSection({ companyId }: DocumentsUploadSec
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 truncate mb-1">
-                    {doc.document_name}
+                    {doc.file_name}
                   </h3>
-                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getCategoryBadgeColor(doc.document_category)}`}>
-                    {getCategoryLabel(doc.document_category)}
+                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getCategoryBadgeColor(doc.category)}`}>
+                    {getCategoryLabel(doc.category)}
                   </span>
                 </div>
               </div>
 
-              {doc.description && (
-                <p className="text-sm text-gray-600 mb-2 line-clamp-2">{doc.description}</p>
+              {doc.notes && (
+                <p className="text-sm text-gray-600 mb-2 line-clamp-2">{doc.notes}</p>
               )}
 
               <div className="space-y-1 text-xs text-gray-500 mb-3">
@@ -473,9 +474,6 @@ export default function DocumentsUploadSection({ companyId }: DocumentsUploadSec
                 )}
                 {doc.expiry_date && (
                   <p>⏰ Validade: {new Date(doc.expiry_date).toLocaleDateString('pt-BR')}</p>
-                )}
-                {doc.document_number && (
-                  <p>🔢 Nº {doc.document_number}</p>
                 )}
               </div>
 

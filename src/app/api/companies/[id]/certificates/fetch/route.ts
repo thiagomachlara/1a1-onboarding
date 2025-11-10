@@ -98,29 +98,67 @@ export async function POST(
       delete result.queryData.pdfBase64;
     }
 
-    // Salvar certificado no banco de dados
-    const { data: certificate, error: insertError } = await supabase
+    // Verificar se já existe um certificado deste tipo para esta empresa
+    const { data: existingCert } = await supabase
       .from('compliance_certificates')
-      .insert({
-        company_id: companyId,
-        certificate_type: certificateType,
-        status: result.status,
-        issue_date: result.issueDate,
-        expiry_date: result.expiryDate,
-        certificate_number: result.certificateNumber,
-        protocol_number: result.protocolNumber,
-        pdf_url: pdfUrl,
-        pdf_storage_path: pdfStoragePath,
-        query_data: result.queryData,
-        error_message: result.errorMessage,
-        fetched_at: new Date().toISOString(),
-        last_checked_at: new Date().toISOString(),
-      })
-      .select()
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('certificate_type', certificateType)
       .single();
 
-    if (insertError) {
-      console.error('Erro ao salvar certificado:', insertError);
+    let certificate;
+    let dbError;
+
+    if (existingCert) {
+      // Atualizar certificado existente
+      const { data, error } = await supabase
+        .from('compliance_certificates')
+        .update({
+          status: result.status,
+          issue_date: result.issueDate,
+          expiry_date: result.expiryDate,
+          certificate_number: result.certificateNumber,
+          protocol_number: result.protocolNumber,
+          pdf_url: pdfUrl,
+          pdf_storage_path: pdfStoragePath,
+          query_data: result.queryData,
+          error_message: result.errorMessage,
+          last_checked_at: new Date().toISOString(),
+        })
+        .eq('id', existingCert.id)
+        .select()
+        .single();
+      
+      certificate = data;
+      dbError = error;
+    } else {
+      // Criar novo certificado
+      const { data, error } = await supabase
+        .from('compliance_certificates')
+        .insert({
+          company_id: companyId,
+          certificate_type: certificateType,
+          status: result.status,
+          issue_date: result.issueDate,
+          expiry_date: result.expiryDate,
+          certificate_number: result.certificateNumber,
+          protocol_number: result.protocolNumber,
+          pdf_url: pdfUrl,
+          pdf_storage_path: pdfStoragePath,
+          query_data: result.queryData,
+          error_message: result.errorMessage,
+          fetched_at: new Date().toISOString(),
+          last_checked_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      
+      certificate = data;
+      dbError = error;
+    }
+
+    if (dbError) {
+      console.error('Erro ao salvar certificado:', dbError);
       return NextResponse.json(
         { success: false, error: 'Erro ao salvar certificado no banco de dados' },
         { status: 500 }
