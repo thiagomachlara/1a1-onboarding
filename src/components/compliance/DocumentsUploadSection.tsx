@@ -457,9 +457,16 @@ export default function DocumentsUploadSection({ companyId }: DocumentsUploadSec
                   <h3 className="font-semibold text-gray-900 truncate mb-1">
                     {doc.file_name}
                   </h3>
-                  <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getCategoryBadgeColor(doc.category)}`}>
-                    {getCategoryLabel(doc.category)}
-                  </span>
+                  <div className="flex gap-2 flex-wrap">
+                    <span className={`inline-block px-2 py-1 text-xs font-medium rounded-full border ${getCategoryBadgeColor(doc.category)}`}>
+                      {getCategoryLabel(doc.category)}
+                    </span>
+                    {doc.document_type && (
+                      <span className="inline-block px-2 py-1 text-xs font-medium rounded-full border bg-blue-100 text-blue-800 border-blue-300">
+                        {doc.document_type}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 

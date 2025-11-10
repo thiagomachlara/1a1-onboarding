@@ -1,196 +1,121 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  getCertificateTypeName,
-  getCertificateStatusColor,
-  getCertificateStatusText,
-  isCertificateValid,
-  daysUntilExpiry,
-} from '@/lib/government-certificates';
 import toast from 'react-hot-toast';
 
-interface Certificate {
+interface ComplianceDocument {
   id: string;
-  certificate_type: string;
-  status: string;
-  issue_date?: string;
+  file_name: string;
+  document_type: string;
+  file_url: string;
   expiry_date?: string;
-  certificate_number?: string;
-  protocol_number?: string;
-  pdf_url?: string;
-  error_message?: string;
-  fetched_at: string;
-  last_checked_at?: string;
+  uploaded_at: string;
 }
 
 interface CertificatesSectionProps {
   companyId: string;
 }
 
+// Lista fixa de certificados necessários
+const REQUIRED_CERTIFICATES = [
+  {
+    type: 'CNDT',
+    name: 'CNDT (Débitos Trabalhistas)',
+    description: 'Certidão Negativa de Débitos Trabalhistas',
+    emissionUrl: 'https://www.tst.jus.br/certidao',
+  },
+  {
+    type: 'CND_FEDERAL',
+    name: 'CND Federal (Receita Federal)',
+    description: 'Certidão Negativa de Débitos Federais',
+    emissionUrl: 'https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PJ/Emitir',
+  },
+];
+
 export default function CertificatesSection({ companyId }: CertificatesSectionProps) {
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [documents, setDocuments] = useState<ComplianceDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fetching, setFetching] = useState<string | null>(null);
 
   useEffect(() => {
-    loadCertificates();
+    loadDocuments();
   }, [companyId]);
 
-  const loadCertificates = async () => {
+  const loadDocuments = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/companies/${companyId}/certificates`);
+      const response = await fetch(`/api/companies/${companyId}/compliance-documents`);
       const data = await response.json();
 
       if (data.success) {
-        setCertificates(data.certificates || []);
+        // Filtrar apenas documentos de certificados
+        const certDocs = (data.documents || []).filter((doc: ComplianceDocument) =>
+          ['CNDT', 'CND_FEDERAL'].includes(doc.document_type)
+        );
+        setDocuments(certDocs);
       }
     } catch (error) {
-      console.error('Erro ao carregar certificados:', error);
-      toast.error('Erro ao carregar certificados');
+      console.error('Erro ao carregar documentos:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFetchCertificate = async (certificateType: string) => {
-    const toastId = toast.loading(`🔄 Buscando ${getCertificateTypeName(certificateType)}...`);
-    
-    try {
-      setFetching(certificateType);
-      
-      const response = await fetch(`/api/companies/${companyId}/certificates/fetch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ certificateType }),
-      });
+  const getCertificateDocument = (certType: string): ComplianceDocument | undefined => {
+    return documents.find((doc) => doc.document_type === certType);
+  };
 
-      const data = await response.json();
+  const isExpiringSoon = (expiryDate: string): boolean => {
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    const daysUntilExpiry = Math.floor((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return daysUntilExpiry <= 30 && daysUntilExpiry >= 0;
+  };
 
-      if (data.success) {
-        toast.success('✅ Certificado obtido com sucesso!', { id: toastId });
-        await loadCertificates();
-      } else {
-        toast.error(`❌ ${data.error}`, { id: toastId });
-      }
-    } catch (error: any) {
-      console.error('Erro ao buscar certificado:', error);
-      toast.error('❌ Erro ao buscar certificado', { id: toastId });
-    } finally {
-      setFetching(null);
+  const isExpired = (expiryDate: string): boolean => {
+    const expiry = new Date(expiryDate);
+    const now = new Date();
+    return expiry < now;
+  };
+
+  const getStatusBadge = (cert: typeof REQUIRED_CERTIFICATES[0]) => {
+    const doc = getCertificateDocument(cert.type);
+
+    if (!doc) {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">
+          ⏳ Pendente
+        </span>
+      );
     }
-  };
 
-  const renderCertificateCard = (cert: Certificate) => {
-    const isValid = cert.expiry_date ? isCertificateValid(cert.expiry_date) : false;
-    const daysLeft = cert.expiry_date ? daysUntilExpiry(cert.expiry_date) : null;
-    
-    return (
-      <div key={cert.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 mb-1">
-              {getCertificateTypeName(cert.certificate_type)}
-            </h3>
-            {cert.certificate_number && (
-              <p className="text-xs text-gray-500">Nº {cert.certificate_number}</p>
-            )}
-            {cert.protocol_number && (
-              <p className="text-xs text-gray-500">Protocolo: {cert.protocol_number}</p>
-            )}
-          </div>
-          <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getCertificateStatusColor(cert.status)}`}>
-            {getCertificateStatusText(cert.status)}
+    if (doc.expiry_date) {
+      if (isExpired(doc.expiry_date)) {
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 border border-red-300">
+            ❌ Vencido
           </span>
-        </div>
+        );
+      }
 
-        {/* Datas */}
-        <div className="space-y-1 mb-3">
-          {cert.issue_date && (
-            <p className="text-sm text-gray-600">
-              📅 <span className="font-medium">Emissão:</span>{' '}
-              {new Date(cert.issue_date).toLocaleDateString('pt-BR')}
-            </p>
-          )}
-          {cert.expiry_date && (
-            <div>
-              <p className="text-sm text-gray-600">
-                ⏰ <span className="font-medium">Validade:</span>{' '}
-                {new Date(cert.expiry_date).toLocaleDateString('pt-BR')}
-              </p>
-              {daysLeft !== null && (
-                <p className={`text-xs mt-1 ${
-                  daysLeft < 0 ? 'text-red-600' :
-                  daysLeft < 30 ? 'text-yellow-600' :
-                  'text-green-600'
-                }`}>
-                  {daysLeft < 0 ? `⚠️ Expirado há ${Math.abs(daysLeft)} dias` :
-                   daysLeft === 0 ? '⚠️ Expira hoje' :
-                   daysLeft < 30 ? `⚠️ Expira em ${daysLeft} dias` :
-                   `✅ Válido por mais ${daysLeft} dias`}
-                </p>
-              )}
-            </div>
-          )}
-          <p className="text-xs text-gray-500">
-            🔄 Última verificação: {new Date(cert.last_checked_at || cert.fetched_at).toLocaleDateString('pt-BR')}
-          </p>
-        </div>
+      if (isExpiringSoon(doc.expiry_date)) {
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800 border border-orange-300">
+            ⚠️ Vence em breve
+          </span>
+        );
+      }
+    }
 
-        {/* Mensagem de erro */}
-        {cert.error_message && (
-          <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-            ⚠️ {cert.error_message}
-          </div>
-        )}
-
-        {/* Ações */}
-        <div className="flex gap-2">
-          {cert.pdf_url && (
-            <a
-              href={cert.pdf_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors text-center"
-            >
-              📥 Download PDF
-            </a>
-          )}
-          <button
-            onClick={() => handleFetchCertificate(cert.certificate_type)}
-            disabled={fetching === cert.certificate_type}
-            className="px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 transition-colors disabled:opacity-50"
-          >
-            🔄 Atualizar
-          </button>
-        </div>
-      </div>
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 border border-green-300">
+        ✅ Obtido
+      </span>
     );
   };
 
-  const renderFetchButton = (certificateType: string) => {
-    const existing = certificates.find(c => c.certificate_type === certificateType);
-    if (existing) return null;
-
-    return (
-      <div key={certificateType} className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-        <div className="text-gray-400 text-3xl mb-2">📄</div>
-        <h3 className="font-semibold text-gray-900 mb-2">
-          {getCertificateTypeName(certificateType)}
-        </h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Certificado ainda não obtido
-        </p>
-        <button
-          onClick={() => handleFetchCertificate(certificateType)}
-          disabled={fetching === certificateType}
-          className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          {fetching === certificateType ? '🔄 Buscando...' : '🔍 Buscar Certificado'}
-        </button>
-      </div>
-    );
+  const handleEmitClick = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    toast.success('🌐 Abrindo site do órgão emissor em nova aba');
   };
 
   if (loading) {
@@ -202,12 +127,6 @@ export default function CertificatesSection({ companyId }: CertificatesSectionPr
     );
   }
 
-  const certificateTypes = ['CND_FEDERAL', 'CNDT'];
-  const existingCerts = certificates.filter(c => certificateTypes.includes(c.certificate_type));
-  const missingTypes = certificateTypes.filter(
-    type => !certificates.some(c => c.certificate_type === type)
-  );
-
   return (
     <div>
       <div className="mb-6">
@@ -217,40 +136,67 @@ export default function CertificatesSection({ companyId }: CertificatesSectionPr
         </p>
       </div>
 
-      {/* Certificados Existentes */}
-      {existingCerts.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-            Certificados Obtidos ({existingCerts.length})
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {existingCerts.map(renderCertificateCard)}
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {REQUIRED_CERTIFICATES.map((cert) => {
+          const doc = getCertificateDocument(cert.type);
+          const hasDocument = !!doc;
 
-      {/* Certificados Faltantes */}
-      {missingTypes.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-            Certificados Pendentes ({missingTypes.length})
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {missingTypes.map(renderFetchButton)}
-          </div>
-        </div>
-      )}
+          return (
+            <div
+              key={cert.type}
+              className="border rounded-lg p-6 hover:shadow-md transition-shadow bg-white"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 text-lg mb-1">{cert.name}</h3>
+                  <p className="text-sm text-gray-600">{cert.description}</p>
+                </div>
+                {getStatusBadge(cert)}
+              </div>
 
-      {/* Estado vazio */}
-      {certificates.length === 0 && (
-        <div className="text-center py-12">
-          <div className="text-gray-400 text-5xl mb-4">📄</div>
-          <p className="text-gray-500 mb-6">Nenhum certificado obtido ainda</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-            {certificateTypes.map(renderFetchButton)}
-          </div>
-        </div>
-      )}
+              {hasDocument && doc.expiry_date && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium">📅 Validade:</span>{' '}
+                    {new Date(doc.expiry_date).toLocaleDateString('pt-BR')}
+                  </p>
+                  {doc.file_name && (
+                    <p className="text-sm text-gray-700 mt-1">
+                      <span className="font-medium">📄 Arquivo:</span> {doc.file_name}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleEmitClick(cert.emissionUrl)}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  🌐 Emitir no site oficial
+                </button>
+
+                {hasDocument && doc.file_url && (
+                  <a
+                    href={doc.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    📥 Ver PDF
+                  </a>
+                )}
+              </div>
+
+              {!hasDocument && (
+                <p className="mt-3 text-xs text-gray-500 text-center">
+                  💡 Após emitir, faça upload na seção "Documentos de Compliance" abaixo
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
