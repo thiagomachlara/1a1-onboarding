@@ -20,11 +20,15 @@ export async function POST(
     console.log('[EMIT] Buscando empresa:', companyId);
     const { data: company, error: companyError } = await supabase
       .from('applicants')
-      .select('tin, name')
+      .select('document_number, full_name, company_name')
       .eq('id', companyId)
       .single();
     
     console.log('[EMIT] Resultado da busca:', { company, companyError });
+    
+    // Determinar o CNPJ (document_number) e nome da empresa
+    const cnpj = company.document_number;
+    const companyName = company.company_name || company.full_name;
 
     if (companyError || !company) {
       return NextResponse.json(
@@ -56,7 +60,7 @@ export async function POST(
 
     // Chamar API da InfoSimples baseado no tipo de certidão
     let result;
-    const cnpj = company.tin.replace(/\D/g, ''); // Remove formatação
+    // CNPJ já foi extraído acima
 
     try {
       switch (certificate_type) {
