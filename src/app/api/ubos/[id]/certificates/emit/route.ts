@@ -105,12 +105,17 @@ export async function POST(
           );
       }
 
-      console.log('[UBO_EMIT] Resposta da InfoSimples:', { success: result.success });
+      console.log('[UBO_EMIT] Resposta da InfoSimples:', { code: result.code });
 
-      if (!result.success) {
+      // Verificar se a consulta foi bem-sucedida
+      if (!infosimples.isSuccess(result)) {
         return NextResponse.json(
-          { success: false, error: result.error || 'Erro ao emitir certidão' },
-          { status: 500 }
+          {
+            success: false,
+            error: infosimples.getErrorMessage(result),
+            code: result.code,
+          },
+          { status: 400 }
         );
       }
 
@@ -122,6 +127,42 @@ export async function POST(
       );
     }
 
+    // Baixar PDF do site_receipt (se disponível)
+    let pdfStoragePath = null;
+    if (result.site_receipts && result.site_receipts.length > 0) {
+      try {
+        const pdfUrl = result.site_receipts[0];
+        const pdfBuffer = await infosimples.baixarPDF(pdfUrl);
+
+        // Salvar PDF no Supabase Storage
+        const fileName = `${certificate_type}_${cpf}_${Date.now()}.pdf`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('compliance-certificates')
+          .upload(fileName, pdfBuffer, {
+            contentType: 'application/pdf',
+          });
+
+        if (uploadError) {
+          console.error('[UBO_EMIT] Erro ao fazer upload do PDF:', uploadError);
+        } else {
+          pdfStoragePath = uploadData.path;
+        }
+      } catch (pdfError) {
+        console.error('[UBO_EMIT] Erro ao processar PDF:', pdfError);
+      }
+    }
+
+    // Determinar status baseado nos dados retornados
+    let status = 'obtida';
+    if (result.data && result.data.length > 0) {
+      const hasIssues = result.data.some((item: any) => 
+        item.situacao === 'IRREGULAR' || 
+        item.status === 'IRREGULAR' ||
+        item.pendencias?.length > 0
+      );
+      status = hasIssues ? 'irregular' : 'regular';
+    }
+
     // Salvar certidão no banco
     const { data: certificate, error: saveError } = await supabase
       .from('compliance_certificates')
@@ -129,9 +170,9 @@ export async function POST(
         ubo_id: uboId,
         company_id: ubo.company_id,
         certificate_type_id: certificate_type,
-        status: result.status || 'completed',
-        file_url: result.pdfUrl,
-        metadata: result.data || {},
+        status: status,
+        file_url: pdfStoragePath,
+        metadata: result.data || [],
         issued_at: new Date().toISOString(),
       })
       .select()
