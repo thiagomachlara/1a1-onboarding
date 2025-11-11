@@ -97,15 +97,7 @@ export async function POST(
         case 'pf_improbidade':
           result = await infosimples.consultarImprobidade({ cpf, nome });
           break;
-        case 'pf_ceis':
-          result = await infosimples.consultarCEIS({ cpf });
-          break;
-        case 'pf_cepim':
-          result = await infosimples.consultarCEPIM({ cpf });
-          break;
-        case 'pf_cnep':
-          result = await infosimples.consultarCNEP({ cpf });
-          break;
+        // Nota: CEIS, CEPIM e CNEP não estão disponíveis na biblioteca InfoSimples ainda
         default:
           return NextResponse.json(
             { success: false, error: 'Tipo de certidão PF não suportado' },
