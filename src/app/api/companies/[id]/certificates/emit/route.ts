@@ -37,7 +37,13 @@ export async function POST(
     const cnpj = company.document_number;
     const companyName = company.company_name || company.full_name;
 
-    if (!certificate_type) {ão
+    if (!certificate_type) {
+      return NextResponse.json(
+        { success: false, error: 'Tipo de certidão não informado' },
+        { status: 400 }
+      );
+    }
+    
     const { data: certType, error: certTypeError } = await supabase
       .from('compliance_certificate_types')
       .select('*')
