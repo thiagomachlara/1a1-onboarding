@@ -19,7 +19,7 @@ export async function POST(
     // Buscar dados da empresa
     const { data: company, error: companyError } = await supabase
       .from('applicants')
-      .select('tin as cnpj, name')
+      .select('tin, name')
       .eq('id', companyId)
       .single();
 
@@ -53,7 +53,7 @@ export async function POST(
 
     // Chamar API da InfoSimples baseado no tipo de certidão
     let result;
-    const cnpj = company.cnpj.replace(/\D/g, ''); // Remove formatação
+    const cnpj = company.tin.replace(/\D/g, ''); // Remove formatação
 
     try {
       switch (certificate_type) {
