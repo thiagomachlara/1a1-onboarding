@@ -36,19 +36,10 @@ export async function GET(
     }
 
     // Buscar documentos do UBO
-    const { data: documents, error: docsError } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('applicant_id', id)
-      .order('created_at', { ascending: false });
-
-    if (docsError) {
-      console.error('[UBO_DOCUMENTS] Erro ao buscar documentos:', docsError);
-      return NextResponse.json(
-        { success: false, error: docsError.message },
-        { status: 500 }
-      );
-    }
+    // NOTA: Por enquanto, retornamos array vazio pois documentos de UBOs
+    // ainda não estão sendo armazenados separadamente
+    // TODO: Implementar armazenamento de documentos de UBOs
+    const documents: any[] = [];
 
     console.log(`[UBO_DOCUMENTS] Encontrados ${documents?.length || 0} documentos`);
 

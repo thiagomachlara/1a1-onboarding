@@ -18,8 +18,8 @@ export async function POST(
 
     // Buscar dados da empresa
     const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('cnpj, name')
+      .from('applicants')
+      .select('tin as cnpj, name')
       .eq('id', companyId)
       .single();
 
