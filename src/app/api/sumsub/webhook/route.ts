@@ -477,6 +477,11 @@ async function handleApplicantReviewed(data: any) {
     if (verificationType === 'company' && applicant.id && document) {
       await enrichCompanyAddress(applicant.id, document, applicant.address);
     }
+    
+    // 🆕 Baixar e armazenar documentos do Sumsub (apenas para empresas aprovadas)
+    if (verificationType === 'company' && applicant.id && reviewAnswer === 'GREEN') {
+      await downloadAndStoreDocuments(data.applicantId, applicant.id);
+    }
   } catch (error) {
     console.error('❌ Failed to save reviewed applicant:', error);
   }
@@ -678,3 +683,106 @@ async function handleApplicantOnHold(data: any) {
   await sendWhatsAppNotification(notification);
 }
 
+
+/**
+ * Baixa e armazena documentos do Sumsub no Supabase Storage
+ * 
+ * ⚡ OTIMIZAÇÃO: Documentos são baixados 1x no webhook e armazenados localmente
+ * - Próximas visualizações usam dados do Supabase (não do Sumsub)
+ * - Reduz latência de 5-10s para <1s
+ * - Evita chamadas desnecessárias à API do Sumsub
+ */
+async function downloadAndStoreDocuments(applicantId: string, companyId: string) {
+  try {
+    console.log('[DOCUMENTS] Baixando documentos do applicant:', applicantId);
+    
+    // Importar funções de download
+    const { listDocuments, downloadDocument } = await import('@/lib/document-downloader');
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabase = await createClient();
+    
+    // 1. Listar documentos do Sumsub
+    const documents = await listDocuments(applicantId);
+    console.log(`[DOCUMENTS] Encontrados ${documents.length} documentos`);
+    
+    if (documents.length === 0) {
+      console.log('[DOCUMENTS] Nenhum documento para baixar');
+      return;
+    }
+    
+    // 2. Baixar e armazenar cada documento
+    let successCount = 0;
+    for (const doc of documents) {
+      try {
+        console.log(`[DOCUMENTS] Processando documento ${doc.image_id}...`);
+        
+        // Baixar arquivo do Sumsub
+        const buffer = await downloadDocument(doc.image_id, doc.inspection_id);
+        
+        // Determinar extensão do arquivo
+        const fileExtension = doc.file_type || 'pdf';
+        const fileName = `${doc.image_id}.${fileExtension}`;
+        const filePath = `company-documents/${companyId}/${fileName}`;
+        
+        // Upload para Supabase Storage (bucket compliance-docs é público)
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('compliance-docs')
+          .upload(filePath, buffer, {
+            contentType: 'application/pdf',
+            upsert: true, // Sobrescrever se já existir
+          });
+        
+        if (uploadError) {
+          console.error('[DOCUMENTS] Erro ao fazer upload:', uploadError);
+          continue;
+        }
+        
+        console.log('[DOCUMENTS] Upload concluído:', filePath);
+        
+        // Gerar URL pública
+        const { data: urlData } = supabase.storage
+          .from('compliance-docs')
+          .getPublicUrl(filePath);
+        
+        // Salvar metadados no banco de dados
+        const { error: dbError } = await supabase
+          .from('documents')
+          .upsert({
+            company_id: companyId,
+            doc_type: doc.doc_set_type,
+            image_id: doc.image_id,
+            inspection_id: doc.inspection_id,
+            file_name: fileName,
+            file_type: fileExtension,
+            status: doc.status || 'pending',
+            review_answer: doc.review_answer,
+            review_comment: doc.review_comment,
+            download_url: urlData.publicUrl,
+            uploaded_at: new Date().toISOString(),
+          }, {
+            onConflict: 'image_id', // Atualizar se já existir
+          });
+        
+        if (dbError) {
+          console.error('[DOCUMENTS] Erro ao salvar no banco:', dbError);
+          continue;
+        }
+        
+        console.log('[DOCUMENTS] Documento salvo com sucesso:', fileName);
+        successCount++;
+        
+        // Aguardar 200ms entre downloads para não sobrecarregar a API
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+      } catch (error) {
+        console.error(`[DOCUMENTS] Erro ao processar documento ${doc.image_id}:`, error);
+      }
+    }
+    
+    console.log(`[DOCUMENTS] Processamento concluído: ${successCount}/${documents.length} documentos salvos`);
+    
+  } catch (error) {
+    console.error('[DOCUMENTS] Erro ao baixar documentos:', error);
+    // Não bloquear o fluxo do webhook se falhar
+  }
+}
