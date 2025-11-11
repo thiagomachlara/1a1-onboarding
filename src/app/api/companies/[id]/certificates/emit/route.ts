@@ -25,10 +25,6 @@ export async function POST(
       .single();
     
     console.log('[EMIT] Resultado da busca:', { company, companyError });
-    
-    // Determinar o CNPJ (document_number) e nome da empresa
-    const cnpj = company.document_number;
-    const companyName = company.company_name || company.full_name;
 
     if (companyError || !company) {
       return NextResponse.json(
@@ -36,8 +32,12 @@ export async function POST(
         { status: 404 }
       );
     }
+    
+    // Determinar o CNPJ (document_number) e nome da empresa
+    const cnpj = company.document_number;
+    const companyName = company.company_name || company.full_name;
 
-    // Buscar tipo de certidão
+    if (!certificate_type) {ão
     const { data: certType, error: certTypeError } = await supabase
       .from('compliance_certificate_types')
       .select('*')
