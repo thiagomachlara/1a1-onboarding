@@ -83,7 +83,7 @@ export async function POST(
           break;
         case 'trf':
         case 'pf_trf':
-          result = await infosimples.emitirCertidaoTRF({ cnpj, nome: company.name });
+          result = await infosimples.emitirCertidaoTRF({ cnpj, nome: companyName });
           break;
         case 'mte':
           result = await infosimples.emitirCertidaoMTE(cnpj);
@@ -105,7 +105,7 @@ export async function POST(
           break;
         case 'improbidade':
         case 'pf_improbidade':
-          result = await infosimples.consultarImprobidade({ cnpj, nome: company.name });
+          result = await infosimples.consultarImprobidade({ cnpj, nome: companyName });
           break;
         default:
           return NextResponse.json(
