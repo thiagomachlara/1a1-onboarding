@@ -17,11 +17,14 @@ export async function POST(
     const { certificate_type } = body;
 
     // Buscar dados da empresa
+    console.log('[EMIT] Buscando empresa:', companyId);
     const { data: company, error: companyError } = await supabase
       .from('applicants')
       .select('tin, name')
       .eq('id', companyId)
       .single();
+    
+    console.log('[EMIT] Resultado da busca:', { company, companyError });
 
     if (companyError || !company) {
       return NextResponse.json(
