@@ -142,16 +142,11 @@ export async function GET(
 
     const screeningPdfUrl = screeningPdf?.metadata?.pdfUrl || null;
 
-    // Buscar dados completos do Sumsub (se disponível)
+    // ⚠️ OTIMIZAÇÃO: Removida chamada ao Sumsub
+    // Os dados do Sumsub já estão sincronizados no Supabase via webhook
+    // Se precisar atualizar, use o botão "Sincronizar com Sumsub" na UI
+    // Isso reduz o tempo de carregamento de 10+ segundos para <1 segundo
     let sumsubData = null;
-    if (company.applicant_id) {
-      try {
-        const path = `/resources/applicants/${company.applicant_id}/one`;
-        sumsubData = await sumsubRequest('GET', path);
-      } catch (error) {
-        console.error('[DOSSIER] Erro ao buscar dados do Sumsub:', error);
-      }
-    }
 
     // Montar dossiê completo
     const dossier = {
