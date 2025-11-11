@@ -126,7 +126,7 @@ export async function GET(
       .from('business_data')
       .select('wallet_address, wallet_verified, wallet_term_pdf_path, wallet_registered_at, wallet_ip')
       .eq('applicant_id', id)
-      .single();
+      .maybeSingle();
 
     console.log('[DOSSIER] Business data query:', { id, businessData, businessDataError });
 
@@ -138,7 +138,7 @@ export async function GET(
       .eq('event_type', 'screening_pdf_generated')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     const screeningPdfUrl = screeningPdf?.metadata?.pdfUrl || null;
 
