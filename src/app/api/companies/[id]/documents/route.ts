@@ -39,7 +39,7 @@ export async function GET(
       );
     }
 
-    // Buscar documentos da empresa e UBOs
+    // Buscar documentos da empresa e UBOs (apenas aprovados)
     const { data: documents, error: docsError } = await supabase
       .from('sumsub_documents')
       .select(`
@@ -52,6 +52,7 @@ export async function GET(
         )
       `)
       .eq('company_id', id)
+      .eq('review_answer', 'GREEN')  // Apenas documentos aprovados
       .is('deleted_at', null)
       .order('synced_at', { ascending: false });
 

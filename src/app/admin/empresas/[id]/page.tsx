@@ -282,14 +282,26 @@ export default function CompanyDossierPage() {
 
   const getDocTypeLabel = (docType: string) => {
     const labels: Record<string, string> = {
+      // Documentos da Empresa
       'COMPANY_DOC': 'Documento da Empresa',
       'ARTICLES': 'Contrato Social',
       'SHAREHOLDER_REGISTRY': 'Registro de Acionistas',
       'COMPANY_POA': 'Procuração',
       'CERTIFICATE': 'Certificado',
       'QUESTIONNAIRE': 'Questionário',
+      'FILE_ATTACHMENT': 'Documento Anexado',
+      'STATE_REGISTRY': 'Registro Estadual',
+      'COMPANY_REGISTRATION': 'Registro da Empresa',
+      
+      // Documentos de UBO
+      'DRIVERS': 'CNH',
+      'ID_CARD': 'RG',
+      'PASSPORT': 'Passaporte',
+      'SELFIE': 'Selfie',
+      'UTILITY_BILL': 'Comprovante de Residência',
+      'BANK_STATEMENT': 'Extrato Bancário',
     };
-    return labels[docType] || docType;
+    return labels[docType] || docType.replace(/_/g, ' ');
   };
 
   const getStatusBadge = (status: string) => {
@@ -687,6 +699,13 @@ export default function CompanyDossierPage() {
                               <div className="flex-1">
                                 <p className="font-medium text-sm">{getDocTypeLabel(doc.doc_type)}</p>
                                 <p className="text-xs text-gray-500 mt-1">{doc.doc_set_type}</p>
+                                {doc.metadata?.original_file_name && (
+                                  <p className="text-xs text-gray-400 mt-0.5" title={doc.metadata.original_file_name}>
+                                    {doc.metadata.original_file_name.length > 30 
+                                      ? doc.metadata.original_file_name.substring(0, 30) + '...' 
+                                      : doc.metadata.original_file_name}
+                                  </p>
+                                )}
                               </div>
                               <span className={`px-2 py-1 text-xs rounded ${getStatusBadge(doc.review_answer || doc.status)}`}>
                                 {doc.review_answer || doc.status}
@@ -732,6 +751,13 @@ export default function CompanyDossierPage() {
                                 {doc.beneficial_owners && (
                                   <p className="text-xs text-blue-600 mt-1 font-medium">
                                     {doc.beneficial_owners.first_name} {doc.beneficial_owners.middle_name ? doc.beneficial_owners.middle_name + ' ' : ''}{doc.beneficial_owners.last_name}
+                                  </p>
+                                )}
+                                {doc.metadata?.original_file_name && (
+                                  <p className="text-xs text-gray-400 mt-0.5" title={doc.metadata.original_file_name}>
+                                    {doc.metadata.original_file_name.length > 30 
+                                      ? doc.metadata.original_file_name.substring(0, 30) + '...' 
+                                      : doc.metadata.original_file_name}
                                   </p>
                                 )}
                               </div>

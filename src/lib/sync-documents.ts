@@ -95,6 +95,9 @@ async function syncDocument(
         tags,
         metadata: {
           original_doc: doc,
+          added_date: doc.added_date,
+          source_type: doc.source, // 'docapture', 'fileupload', etc
+          original_file_name: doc.file_name,
         },
       });
 
