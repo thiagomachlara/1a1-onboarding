@@ -1,18 +1,24 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Loader } from '@googlemaps/js-api-loader';
 
 interface InteractiveMapProps {
   address: string;
   className?: string;
 }
 
+// Declare global google object
+declare global {
+  interface Window {
+    google: typeof google;
+    initMap?: () => void;
+  }
+}
+
 export default function InteractiveMap({ address, className = '' }: InteractiveMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const mapInstanceRef = useRef<google.maps.Map | null>(null);
 
   useEffect(() => {
     const initMap = async () => {
@@ -25,19 +31,25 @@ export default function InteractiveMap({ address, className = '' }: InteractiveM
           throw new Error('Google Maps API key not configured');
         }
 
-        // Load Google Maps API
-        const loader = new Loader({
-          apiKey,
-          version: 'weekly',
-          libraries: ['places', 'marker'],
-        });
-
-        await loader.importLibrary('maps');
+        // Check if Google Maps is already loaded
+        if (!window.google || !window.google.maps) {
+          // Load Google Maps script
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+          script.async = true;
+          script.defer = true;
+          
+          await new Promise<void>((resolve, reject) => {
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Google Maps'));
+            document.head.appendChild(script);
+          });
+        }
 
         if (!mapRef.current) return;
 
         // Geocode address to get coordinates
-        const geocoder = new google.maps.Geocoder();
+        const geocoder = new window.google.maps.Geocoder();
         const geocodeResult = await geocoder.geocode({ address });
 
         if (!geocodeResult.results || geocodeResult.results.length === 0) {
@@ -47,7 +59,7 @@ export default function InteractiveMap({ address, className = '' }: InteractiveM
         const location = geocodeResult.results[0].geometry.location;
 
         // Create map
-        const map = new google.maps.Map(mapRef.current, {
+        const map = new window.google.maps.Map(mapRef.current, {
           center: location,
           zoom: 17,
           mapTypeControl: true,
@@ -55,26 +67,25 @@ export default function InteractiveMap({ address, className = '' }: InteractiveM
           fullscreenControl: true,
           zoomControl: true,
           mapTypeControlOptions: {
-            style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
-            position: google.maps.ControlPosition.TOP_RIGHT,
+            style: window.google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+            position: window.google.maps.ControlPosition.TOP_RIGHT,
           },
           streetViewControlOptions: {
-            position: google.maps.ControlPosition.RIGHT_TOP,
+            position: window.google.maps.ControlPosition.RIGHT_TOP,
           },
           zoomControlOptions: {
-            position: google.maps.ControlPosition.RIGHT_CENTER,
+            position: window.google.maps.ControlPosition.RIGHT_CENTER,
           },
         });
 
         // Add marker
-        new google.maps.Marker({
+        new window.google.maps.Marker({
           position: location,
           map,
           title: address,
-          animation: google.maps.Animation.DROP,
+          animation: window.google.maps.Animation.DROP,
         });
 
-        mapInstanceRef.current = map;
         setIsLoading(false);
       } catch (err) {
         console.error('Error loading map:', err);
@@ -89,7 +100,7 @@ export default function InteractiveMap({ address, className = '' }: InteractiveM
   return (
     <div className={`relative ${className}`}>
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg z-10">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Carregando mapa...</p>
@@ -98,7 +109,7 @@ export default function InteractiveMap({ address, className = '' }: InteractiveM
       )}
       
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-red-50 rounded-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-red-50 rounded-lg z-10">
           <div className="text-center p-4">
             <p className="text-red-600 font-medium mb-2">Erro ao carregar mapa</p>
             <p className="text-red-500 text-sm">{error}</p>
