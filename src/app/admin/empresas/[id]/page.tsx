@@ -161,8 +161,8 @@ export default function CompanyDossierPage() {
     try {
       setSyncing(true);
       
-      // 1. Sincronizar com Sumsub
-      const response = await fetch('/api/admin/update-companies', {
+      // 1. Sincronizar APENAS esta empresa com Sumsub
+      const response = await fetch(`/api/companies/${id}/sync`, {
         method: 'POST',
       });
       
