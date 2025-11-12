@@ -77,7 +77,7 @@ export default function CompanyDossierPage() {
   const id = params.id as string;
 
   const [dossier, setDossier] = useState<CompanyDossier | null>(null);
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<{ company: Document[], ubos: Document[] }>({ company: [], ubos: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -343,7 +343,7 @@ export default function CompanyDossierPage() {
     { id: 'cadastro', name: 'Cadastro', icon: '🏢' },
     { id: 'ubos', name: 'UBOs', icon: '👥', count: dossier.ubos.length },
     { id: 'localizacao', name: 'Localização', icon: '📍' },
-    { id: 'documentos', name: 'Documentos', icon: '📄', count: documents.length },
+    { id: 'documentos', name: 'Documentos', icon: '📄', count: (documents.company?.length || 0) + (documents.ubos?.length || 0) },
     { id: 'compliance', name: 'Compliance', icon: '✅' },
     { id: 'risco', name: 'Risco', icon: '⚠️' },
     { id: 'blockchain', name: 'Blockchain', icon: '💼' },
