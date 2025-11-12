@@ -177,7 +177,7 @@ export class InfoSimplesClient {
   // ==================== HELPER METHODS ====================
 
   /**
-   * Baixa um PDF do site_receipt e retorna o buffer
+   * Baixa o PDF do site_receipt
    * Retorna null se o conteúdo for HTML (não é um PDF real)
    */
   async baixarPDF(url: string): Promise<ArrayBuffer | null> {
@@ -194,8 +194,22 @@ export class InfoSimplesClient {
       return null;
     }
     
-    // Se for PDF, retornar diretamente
-    return await response.arrayBuffer();
+    // Baixar conteúdo
+    const buffer = await response.arrayBuffer();
+    
+    // Verificar assinatura PDF nos primeiros 4 bytes (%PDF)
+    const uint8Array = new Uint8Array(buffer);
+    const isPDF = uint8Array[0] === 0x25 && // %
+                  uint8Array[1] === 0x50 && // P
+                  uint8Array[2] === 0x44 && // D
+                  uint8Array[3] === 0x46;   // F
+    
+    if (!isPDF) {
+      console.log('[INFO] site_receipt não é um PDF válido (assinatura incorreta). Pulando download.');
+      return null;
+    }
+    
+    return buffer;
   }
 
   /**
