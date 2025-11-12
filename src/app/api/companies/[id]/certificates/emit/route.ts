@@ -144,10 +144,11 @@ export async function POST(
 
     // Baixar PDF do site_receipt (se disponível e for realmente um PDF)
     let pdfStoragePath = null;
+    let htmlUrl = null;
     if (result.site_receipts && result.site_receipts.length > 0) {
       try {
-        const pdfUrl = result.site_receipts[0];
-        const pdfBuffer = await infosimples.baixarPDF(pdfUrl);
+        const receiptUrl = result.site_receipts[0];
+        const pdfBuffer = await infosimples.baixarPDF(receiptUrl);
 
         // Apenas salvar se for um PDF real (não HTML)
         if (pdfBuffer) {
@@ -166,7 +167,9 @@ export async function POST(
             console.log('[INFO] PDF salvo com sucesso:', pdfStoragePath);
           }
         } else {
-          console.log('[INFO] site_receipt não contém PDF, apenas dados estruturados.');
+          // Se não for PDF, salvar URL do HTML para visualização
+          htmlUrl = receiptUrl;
+          console.log('[INFO] site_receipt não contém PDF, salvando URL do HTML:', htmlUrl);
         }
       } catch (pdfError) {
         console.error('Erro ao processar PDF:', pdfError);
@@ -195,6 +198,7 @@ export async function POST(
         status,
         issue_date: new Date().toISOString(),
         pdf_storage_path: pdfStoragePath,
+        html_url: htmlUrl,
         query_data: result.data[0] || {},
         infosimples_service: certType.infosimples_service,
         infosimples_price: result.header.price,

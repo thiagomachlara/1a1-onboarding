@@ -19,6 +19,7 @@ interface Certificate {
   issue_date: string | null;
   expiry_date: string | null;
   pdf_storage_path: string | null;
+  html_url: string | null;
   fetched_at: string;
 }
 
@@ -269,6 +270,17 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
                             ⬇️ Baixar
                           </button>
                         </>
+                      )}
+
+                      {/* Botão Ver HTML (para consultas que não geram PDF) */}
+                      {certificate?.html_url && !certificate?.pdf_storage_path && (
+                        <button
+                          onClick={() => window.open(certificate.html_url!, '_blank')}
+                          className="px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-300 rounded-md hover:bg-blue-100"
+                          title="Abrir HTML em nova janela (use Ctrl+P para salvar como PDF)"
+                        >
+                          🌐 Ver HTML
+                        </button>
                       )}
                     </div>
                   </td>
