@@ -163,12 +163,23 @@ export class InfoSimplesClient {
 
   /**
    * Baixa um PDF do site_receipt e retorna o buffer
+   * Retorna null se o conteúdo for HTML (não é um PDF real)
    */
-  async baixarPDF(url: string): Promise<ArrayBuffer> {
+  async baixarPDF(url: string): Promise<ArrayBuffer | null> {
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Erro ao baixar PDF: ${response.statusText}`);
     }
+
+    const contentType = response.headers.get('content-type') || '';
+    
+    // Se for HTML, não é um PDF real - retornar null
+    if (contentType.includes('text/html') || url.endsWith('.html')) {
+      console.log('[INFO] site_receipt é HTML, não PDF. Pulando download.');
+      return null;
+    }
+    
+    // Se for PDF, retornar diretamente
     return await response.arrayBuffer();
   }
 

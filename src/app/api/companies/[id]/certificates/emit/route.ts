@@ -142,25 +142,31 @@ export async function POST(
       );
     }
 
-    // Baixar PDF do site_receipt (se disponível)
+    // Baixar PDF do site_receipt (se disponível e for realmente um PDF)
     let pdfStoragePath = null;
     if (result.site_receipts && result.site_receipts.length > 0) {
       try {
         const pdfUrl = result.site_receipts[0];
         const pdfBuffer = await infosimples.baixarPDF(pdfUrl);
 
-        // Salvar PDF no Supabase Storage
-        const fileName = `${certificate_type}_${cnpj}_${Date.now()}.pdf`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('compliance-certificates')
-          .upload(fileName, pdfBuffer, {
-            contentType: 'application/pdf',
-          });
+        // Apenas salvar se for um PDF real (não HTML)
+        if (pdfBuffer) {
+          // Salvar PDF no Supabase Storage
+          const fileName = `${certificate_type}_${cnpj}_${Date.now()}.pdf`;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('compliance-certificates')
+            .upload(fileName, pdfBuffer, {
+              contentType: 'application/pdf',
+            });
 
-        if (uploadError) {
-          console.error('Erro ao fazer upload do PDF:', uploadError);
+          if (uploadError) {
+            console.error('Erro ao fazer upload do PDF:', uploadError);
+          } else {
+            pdfStoragePath = uploadData.path;
+            console.log('[INFO] PDF salvo com sucesso:', pdfStoragePath);
+          }
         } else {
-          pdfStoragePath = uploadData.path;
+          console.log('[INFO] site_receipt não contém PDF, apenas dados estruturados.');
         }
       } catch (pdfError) {
         console.error('Erro ao processar PDF:', pdfError);
