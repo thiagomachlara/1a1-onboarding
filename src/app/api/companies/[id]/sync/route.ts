@@ -210,6 +210,7 @@ export async function POST(
             }
             
             console.log(`[UBO-STATUS] ${ubo.firstName} ${ubo.lastName}: ${reviewAnswer} → ${uboStatus}`);
+          console.log(`[UBO-DATA-DEBUG] Resposta completa da Sumsub:`, JSON.stringify(uboData, null, 2));
           }
           
           // Extrair NOME COMPLETO VERIFICADO do documento
