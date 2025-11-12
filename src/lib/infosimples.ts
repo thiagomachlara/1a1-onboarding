@@ -74,17 +74,19 @@ export class InfoSimplesClient {
   }
 
   /**
-   * Emite CND Federal (Certidão Negativa de Débitos Federais)
+   * Emite Certidão Negativa de Débitos Federais (PGFN)
+   * @param params - CNPJ para PJ ou CPF + birthdate para PF
    */
-  async emitirCNDFederal(cnpj: string) {
-    return this.consultar('receita-federal/pgfn', { cnpj });
+  async emitirCNDFederal(params: { cnpj?: string; cpf?: string; birthdate?: string; preferencia_emissao?: string }) {
+    return this.consultar('receita-federal/pgfn', params);
   }
 
   /**
    * Emite CNDT (Certidão Negativa de Débitos Trabalhistas)
+   * @param params - CNPJ para PJ ou CPF para PF
    */
-  async emitirCNDT(cnpj: string) {
-    return this.consultar('tribunal/tst/cndt', { cnpj });
+  async emitirCNDT(params: { cnpj?: string; cpf?: string }) {
+    return this.consultar('tribunal/tst/cndt', params);
   }
 
   /**

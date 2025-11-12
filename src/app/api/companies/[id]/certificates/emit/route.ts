@@ -75,11 +75,11 @@ export async function POST(
           break;
         case 'cnd_federal':
         case 'pf_cnd_federal':
-          result = await infosimples.emitirCNDFederal(cnpj);
+          result = await infosimples.emitirCNDFederal({ cnpj, preferencia_emissao: '2via' });
           break;
         case 'cndt':
         case 'pf_cndt':
-          result = await infosimples.emitirCNDT(cnpj);
+          result = await infosimples.emitirCNDT({ cnpj });
           break;
         case 'trf':
         case 'pf_trf':

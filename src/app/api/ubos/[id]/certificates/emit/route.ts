@@ -99,10 +99,20 @@ export async function POST(
 
       switch (certificate_type) {
         case 'pf_cnd_federal':
-          result = await infosimples.emitirCNDFederal(cpf);
+          if (!birthdate) {
+            return NextResponse.json(
+              { success: false, error: 'Data de nascimento não encontrada para o UBO' },
+              { status: 400 }
+            );
+          }
+          result = await infosimples.emitirCNDFederal({ 
+            cpf, 
+            birthdate,
+            preferencia_emissao: '2via' // Recomendado pela InfoSimples
+          });
           break;
         case 'pf_cndt':
-          result = await infosimples.emitirCNDT(cpf);
+          result = await infosimples.emitirCNDT({ cpf });
           break;
         case 'pf_trf':
           result = await infosimples.emitirCertidaoTRF({ cpf, nome });
