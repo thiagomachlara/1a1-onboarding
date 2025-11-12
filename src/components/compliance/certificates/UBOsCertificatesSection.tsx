@@ -5,9 +5,10 @@ import { CertificatesChecklist } from './CertificatesChecklist';
 
 interface UBO {
   id: string;
-  full_name: string;
-  document_number: string;
-  qualification: string;
+  name: string;
+  cpf: string;
+  role: string;
+  shareSize?: number;
 }
 
 interface UBOsCertificatesSectionProps {
@@ -91,14 +92,14 @@ export function UBOsCertificatesSection({ companyId }: UBOsCertificatesSectionPr
                 <div className="flex-shrink-0">
                   <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                     <span className="text-blue-600 font-medium text-sm">
-                      {ubo.full_name ? ubo.full_name.charAt(0).toUpperCase() : '?'}
+                      {ubo.name ? ubo.name.charAt(0).toUpperCase() : '?'}
                     </span>
                   </div>
                 </div>
                 <div className="text-left">
-                  <div className="font-medium text-gray-900">{ubo.full_name}</div>
+                  <div className="font-medium text-gray-900">{ubo.name}</div>
                   <div className="text-sm text-gray-500">
-                    CPF: {ubo.document_number} • {ubo.qualification}
+                    CPF: {ubo.cpf} • {ubo.role}{ubo.shareSize ? ` • ${ubo.shareSize}%` : ''}
                   </div>
                 </div>
               </div>
