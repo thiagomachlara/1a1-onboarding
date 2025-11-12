@@ -710,10 +710,6 @@ export default function CompanyDossierPage() {
               
               <hr className="border-gray-200" />
               
-              <CertificatesSection companyId={id} />
-              
-              <hr className="border-gray-200" />
-              
               <DocumentsUploadSection companyId={id} />
             </div>
           )}
