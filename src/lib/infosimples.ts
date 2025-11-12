@@ -181,34 +181,48 @@ export class InfoSimplesClient {
    * Retorna null se o conteúdo for HTML (não é um PDF real)
    */
   async baixarPDF(url: string): Promise<ArrayBuffer | null> {
+    console.log('[BAIXAR_PDF] URL:', url);
+    
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Erro ao baixar PDF: ${response.statusText}`);
     }
 
     const contentType = response.headers.get('content-type') || '';
+    console.log('[BAIXAR_PDF] Content-Type:', contentType);
     
     // Se for HTML, não é um PDF real - retornar null
     if (contentType.includes('text/html') || url.endsWith('.html')) {
-      console.log('[INFO] site_receipt é HTML, não PDF. Pulando download.');
+      console.log('[BAIXAR_PDF] É HTML (content-type ou extensão). Pulando download.');
       return null;
     }
     
     // Baixar conteúdo
     const buffer = await response.arrayBuffer();
+    console.log('[BAIXAR_PDF] Tamanho do buffer:', buffer.byteLength, 'bytes');
     
     // Verificar assinatura PDF nos primeiros 4 bytes (%PDF)
     const uint8Array = new Uint8Array(buffer);
+    const first4Bytes = Array.from(uint8Array.slice(0, 4));
+    console.log('[BAIXAR_PDF] Primeiros 4 bytes:', first4Bytes, '(esperado: [37, 80, 68, 70] = %PDF)');
+    
     const isPDF = uint8Array[0] === 0x25 && // %
                   uint8Array[1] === 0x50 && // P
                   uint8Array[2] === 0x44 && // D
                   uint8Array[3] === 0x46;   // F
     
+    console.log('[BAIXAR_PDF] É PDF válido?', isPDF);
+    
     if (!isPDF) {
-      console.log('[INFO] site_receipt não é um PDF válido (assinatura incorreta). Pulando download.');
+      // Logar primeiros 100 caracteres para debug
+      const textDecoder = new TextDecoder();
+      const preview = textDecoder.decode(uint8Array.slice(0, 100));
+      console.log('[BAIXAR_PDF] Preview do conteúdo:', preview);
+      console.log('[BAIXAR_PDF] Não é um PDF válido. Pulando download.');
       return null;
     }
     
+    console.log('[BAIXAR_PDF] PDF válido! Retornando buffer.');
     return buffer;
   }
 
