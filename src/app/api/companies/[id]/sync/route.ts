@@ -319,17 +319,10 @@ export async function POST(
     console.log('[COMPANY-SYNC] Sincronizando documentos...');
     let documentsCount = 0;
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/companies/${id}/documents`, {
-        method: 'POST',
-      });
-      
-      if (response.ok) {
-        const docData = await response.json();
-        documentsCount = docData.total || 0;
-        console.log(`[COMPANY-SYNC] ✓ ${documentsCount} documentos sincronizados`);
-      } else {
-        console.error('[COMPANY-SYNC] Erro ao sincronizar documentos:', await response.text());
-      }
+      const { syncAllDocuments } = await import('@/lib/sync-documents');
+      const docResult = await syncAllDocuments(id);
+      documentsCount = docResult.totalSuccess;
+      console.log(`[COMPANY-SYNC] ✓ ${documentsCount} documentos sincronizados (${docResult.companyDocs} empresa, ${docResult.uboDocs} UBOs)`);
     } catch (docError) {
       console.error('[COMPANY-SYNC] Erro ao sincronizar documentos:', docError);
       // Não falhar a sincronização se documentos falharem
