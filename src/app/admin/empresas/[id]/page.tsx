@@ -6,6 +6,7 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import GoogleMapsSection from '@/components/compliance/GoogleMapsSection';
 
 import { CertificatesChecklist } from '@/components/compliance/certificates/CertificatesChecklist';
+import { UBOsCertificatesSection } from '@/components/compliance/certificates/UBOsCertificatesSection';
 import toast from 'react-hot-toast';
 
 interface CompanyDossier {
@@ -705,7 +706,16 @@ export default function CompanyDossierPage() {
           {/* Aba Compliance */}
           {activeTab === 'compliance' && (
             <div className="p-6 space-y-8">
-              <CertificatesChecklist companyId={id} />
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-6">Certidões da Empresa (PJ)</h2>
+                <CertificatesChecklist companyId={id} />
+              </div>
+              
+              <hr className="border-gray-200" />
+              
+              <div>
+                <UBOsCertificatesSection companyId={id} />
+              </div>
             </div>
           )}
 

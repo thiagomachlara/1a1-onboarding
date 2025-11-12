@@ -25,9 +25,11 @@ interface Certificate {
 
 interface CertificatesChecklistProps {
   companyId: string;
+  uboId?: string;
+  entityType?: 'PJ' | 'PF';
 }
 
-export function CertificatesChecklist({ companyId }: CertificatesChecklistProps) {
+export function CertificatesChecklist({ companyId, uboId, entityType = 'PJ' }: CertificatesChecklistProps) {
   const [certificateTypes, setCertificateTypes] = useState<CertificateType[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,10 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
   const loadCertificates = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/companies/${companyId}/certificates`);
+      const endpoint = uboId 
+        ? `/api/ubos/${uboId}/certificates`
+        : `/api/companies/${companyId}/certificates`;
+      const response = await fetch(endpoint);
       const data = await response.json();
 
       if (data.success) {
@@ -57,7 +62,10 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
 
   const viewPDF = async (certificateId: string) => {
     try {
-      const response = await fetch(`/api/companies/${companyId}/certificates/${certificateId}/pdf`);
+      const endpoint = uboId
+        ? `/api/ubos/${uboId}/certificates/${certificateId}/pdf`
+        : `/api/companies/${companyId}/certificates/${certificateId}/pdf`;
+      const response = await fetch(endpoint);
       const data = await response.json();
 
       if (data.success && data.url) {
@@ -73,7 +81,10 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
 
   const downloadPDF = async (certificateId: string, certificateName: string) => {
     try {
-      const response = await fetch(`/api/companies/${companyId}/certificates/${certificateId}/pdf`);
+      const endpoint = uboId
+        ? `/api/ubos/${uboId}/certificates/${certificateId}/pdf`
+        : `/api/companies/${companyId}/certificates/${certificateId}/pdf`;
+      const response = await fetch(endpoint);
       const data = await response.json();
 
       if (data.success && data.url) {
@@ -96,7 +107,10 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
   const emitCertificate = async (certificateTypeId: string) => {
     try {
       setEmitting(certificateTypeId);
-      const response = await fetch(`/api/companies/${companyId}/certificates/emit`, {
+      const endpoint = uboId
+        ? `/api/ubos/${uboId}/certificates/emit`
+        : `/api/companies/${companyId}/certificates/emit`;
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ certificate_type: certificateTypeId }),
@@ -135,7 +149,10 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
         formData.append('file', file);
         formData.append('certificate_type', certificateType);
 
-        const response = await fetch(`/api/companies/${companyId}/certificates/upload`, {
+        const endpoint = uboId
+          ? `/api/ubos/${uboId}/certificates/upload`
+          : `/api/companies/${companyId}/certificates/upload`;
+        const response = await fetch(endpoint, {
           method: 'POST',
           body: formData,
         });
