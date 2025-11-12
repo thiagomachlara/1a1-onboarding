@@ -188,9 +188,7 @@ export default function CompanyDossierPage() {
     }
   };
 
-  const handleDownloadDocument = (imageId: string, inspectionId: string) => {
-    window.open(`/api/documents/download?imageId=${imageId}&inspectionId=${inspectionId}`, '_blank');
-  };
+  // Função removida - agora usamos download_url diretamente do Supabase Storage
 
   const handleDownloadSummaryReport = async () => {
     if (!dossier?.company.applicant_id) return;
@@ -649,13 +647,15 @@ export default function CompanyDossierPage() {
                           <p className="text-sm font-semibold mb-2">📄 Documentos ({uboDocuments[ubo.applicant_id].length})</p>
                           <div className="space-y-1">
                             {uboDocuments[ubo.applicant_id].map((doc: any, docIdx: number) => (
-                              <button
+                              <a
                                 key={docIdx}
-                                onClick={() => handleDownloadDocument(doc.id, doc.inspection_id)}
+                                href={doc.download_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="text-xs text-blue-600 hover:underline block w-full text-left"
                               >
-                                📥 {doc.type || 'Documento'}
-                              </button>
+                                📅 {doc.type || 'Documento'}
+                              </a>
                             ))}
                           </div>
                         </div>
