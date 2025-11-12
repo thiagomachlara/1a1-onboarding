@@ -151,15 +151,17 @@ export class InfoSimplesClient {
 
   /**
    * Emite Certidão de Antecedentes Criminais (Polícia Federal)
-   * @param params - Parâmetros obrigatórios: cpf, nome, birthdate, nome_mae, nome_pai, uf_nascimento
+   * @param params - Parâmetros obrigatórios: cpf, nome, birthdate, nome_mae
+   * @param params.nome_pai - Opcional: nome do pai
+   * @param params.uf_nascimento - Opcional: UF de nascimento
    */
   async emitirAntecedentesCriminais(params: {
     cpf: string;
     nome: string;
     birthdate: string;
     nome_mae: string;
-    nome_pai: string;
-    uf_nascimento: string;
+    nome_pai?: string;
+    uf_nascimento?: string;
   }) {
     return this.consultar('antecedentes-criminais/pf/emit', params);
   }
