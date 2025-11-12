@@ -24,7 +24,7 @@ export async function POST(
     // Buscar dados do UBO
     const { data: ubo, error: uboError } = await supabase
       .from('beneficial_owners')
-      .select('tin, first_name, last_name, company_id')
+      .select('tin, first_name, last_name, dob, company_id')
       .eq('id', uboId)
       .single();
 
@@ -68,6 +68,16 @@ export async function POST(
     // Preparar dados
     const cpf = ubo.tin.replace(/\D/g, ''); // Remove formatação
     const nome = `${ubo.first_name} ${ubo.last_name}`.trim();
+    
+    // Formatar data de nascimento para DD/MM/AAAA
+    let birthdate = '';
+    if (ubo.dob) {
+      const date = new Date(ubo.dob);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      birthdate = `${day}/${month}/${year}`;
+    }
 
     // Chamar API da InfoSimples baseado no tipo de certidão
     let result;
@@ -98,14 +108,26 @@ export async function POST(
           result = await infosimples.consultarImprobidade({ cpf, nome });
           break;
         case 'pf_cpf':
-          result = await infosimples.consultarCPF(cpf);
+          if (!birthdate) {
+            return NextResponse.json(
+              { success: false, error: 'Data de nascimento não encontrada para o UBO' },
+              { status: 400 }
+            );
+          }
+          result = await infosimples.consultarCPF(cpf, birthdate);
           break;
         case 'pf_antecedentes':
-          result = await infosimples.emitirAntecedentesCriminais(cpf, nome);
-          break;
+          // Requer: cpf, nome, birthdate, nome_mae, nome_pai, uf_nascimento
+          return NextResponse.json(
+            { success: false, error: 'Certidão de Antecedentes Criminais requer dados adicionais (nome da mãe, pai, UF nascimento) que ainda não estão disponíveis' },
+            { status: 400 }
+          );
         case 'pf_mandados':
-          result = await infosimples.consultarMandadosPrisao(cpf, nome);
-          break;
+          // Requer: cpf, nome, nome_mae
+          return NextResponse.json(
+            { success: false, error: 'Certidão de Mandados de Prisão requer nome da mãe que ainda não está disponível' },
+            { status: 400 }
+          );
         default:
           return NextResponse.json(
             { success: false, error: 'Tipo de certidão PF não suportado' },

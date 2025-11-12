@@ -140,23 +140,36 @@ export class InfoSimplesClient {
 
   /**
    * Consulta Situação Cadastral do CPF
+   * @param cpf - Número do CPF
+   * @param birthdate - Data de nascimento no formato DD/MM/AAAA
    */
-  async consultarCPF(cpf: string) {
-    return this.consultar('receita-federal/cpf', { cpf });
+  async consultarCPF(cpf: string, birthdate: string) {
+    return this.consultar('receita-federal/cpf', { cpf, birthdate });
   }
 
   /**
    * Emite Certidão de Antecedentes Criminais (Polícia Federal)
+   * @param params - Parâmetros obrigatórios: cpf, nome, birthdate, nome_mae, nome_pai, uf_nascimento
    */
-  async emitirAntecedentesCriminais(cpf: string, nome: string) {
-    return this.consultar('antecedentes-criminais/pf/emit', { cpf, nome });
+  async emitirAntecedentesCriminais(params: {
+    cpf: string;
+    nome: string;
+    birthdate: string;
+    nome_mae: string;
+    nome_pai: string;
+    uf_nascimento: string;
+  }) {
+    return this.consultar('antecedentes-criminais/pf/emit', params);
   }
 
   /**
    * Consulta Mandados de Prisão (BNMP - CNJ)
+   * @param cpf - Número do CPF
+   * @param nome - Nome completo
+   * @param nome_mae - Nome da mãe
    */
-  async consultarMandadosPrisao(cpf: string, nome: string) {
-    return this.consultar('cnj/mandados-prisao', { cpf, nome });
+  async consultarMandadosPrisao(cpf: string, nome: string, nome_mae: string) {
+    return this.consultar('cnj/mandados-prisao', { cpf, nome, nome_mae });
   }
 
   // ==================== HELPER METHODS ====================
