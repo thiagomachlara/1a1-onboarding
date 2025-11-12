@@ -125,12 +125,14 @@ export async function POST(
       });
 
     if (uploadError) {
-      console.error('Error uploading facade image:', uploadError);
+      console.error('[Facade API] Error uploading facade image:', uploadError);
       return NextResponse.json(
-        { error: 'Failed to save facade image' },
+        { error: `Failed to upload image to Supabase: ${uploadError.message}` },
         { status: 500 }
       );
     }
+    
+    console.log('[Facade API] ✓ Image uploaded successfully:', fileName);
 
     // Get public URL
     const { data: urlData } = supabase.storage
@@ -144,7 +146,10 @@ export async function POST(
       .eq('id', id);
 
     if (updateError) {
-      console.error('Error updating company with facade URL:', updateError);
+      console.error('[Facade API] Error updating company with facade URL:', updateError);
+      // Não retornar erro aqui, pois a imagem já foi salva com sucesso
+    } else {
+      console.log('[Facade API] ✓ Company record updated with facade URL');
     }
 
     return NextResponse.json({
@@ -152,9 +157,10 @@ export async function POST(
       facadeUrl: urlData.publicUrl,
     });
   } catch (error) {
-    console.error('Error saving facade image:', error);
+    console.error('[Facade API] Error saving facade image:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: `Internal server error: ${errorMessage}` },
       { status: 500 }
     );
   }

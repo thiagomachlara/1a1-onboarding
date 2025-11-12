@@ -61,14 +61,19 @@ export default function GoogleMapsSection({ companyId }: GoogleMapsSectionProps)
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save facade image');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
+      const result = await response.json();
+      console.log('[Facade] Imagem salva com sucesso:', result.facadeUrl);
+      
       setFacadeSaved(true);
       setTimeout(() => setFacadeSaved(false), 3000);
     } catch (err) {
-      console.error('Error saving facade:', err);
-      alert('Erro ao salvar foto da fachada');
+      console.error('[Facade] Erro ao salvar foto da fachada:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      alert(`Erro ao salvar foto da fachada: ${errorMessage}`);
     } finally {
       setSavingFacade(false);
     }
