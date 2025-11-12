@@ -49,7 +49,12 @@ export async function GET(
 
     // Use simplifyAddress to properly format the full address for display
     // This ensures street numbers are preserved while removing complex details
+    console.log('[MAPS-DEBUG] addressStreet:', addressStreet);
+    console.log('[MAPS-DEBUG] addressCity:', addressCity);
+    console.log('[MAPS-DEBUG] addressState:', addressState);
+    console.log('[MAPS-DEBUG] addressPostalCode:', addressPostalCode);
     const fullAddress = simplifyAddress(addressStreet, addressCity, addressState, addressPostalCode);
+    console.log('[MAPS-DEBUG] fullAddress:', fullAddress);
 
     // Validate we have minimum required address data
     if (!addressStreet || !addressCity) {

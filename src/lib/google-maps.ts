@@ -25,9 +25,24 @@ export function simplifyAddress(
   state: string,
   postalCode: string
 ): string {
-  // Extract street name and number (remove details like Conj, Andar, Cond, etc.)
+  // Remove detalhes complexos (Conj, Andar, Cond, etc) mas preserva rua e número
   const streetMatch = address.match(/^(.+?)\s*-?\s*(?:Conj|Andar|Cond|Bloco|Torre|Sala)/i);
-  const street = streetMatch ? streetMatch[1].trim() : address.split(',').slice(0, 2).join(',').trim();
+  
+  let street = address;
+  if (streetMatch) {
+    // Se encontrou padrão complexo, usa apenas a parte antes dele
+    street = streetMatch[1].trim();
+  } else {
+    // Se não tem padrão complexo, remove apenas CEP duplicado e detalhes extras
+    // Exemplo: "R VISCONDE DE INHAUMA,00134, SAL 2001 A 2024, 20.091-901,CENTRO,RIO DE JANEIRO,RJ"
+    // Mantém: "R VISCONDE DE INHAUMA,00134"
+    const parts = address.split(',').map(p => p.trim());
+    
+    // Pegar rua e número (primeiras 2 partes)
+    if (parts.length >= 2) {
+      street = `${parts[0]}, ${parts[1]}`;
+    }
+  }
   
   // Build simplified address: Street, City, State PostalCode
   return `${street}, ${city}, ${state} ${postalCode}`;
