@@ -66,7 +66,8 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
 
       if (data.success) {
         await loadCertificates();
-        alert(`Certidão emitida com sucesso! Custo: R$ ${data.infosimples.price.toFixed(2)}`);
+        const price = typeof data.infosimples?.price === 'number' ? data.infosimples.price : parseFloat(data.infosimples?.price || 0);
+        alert(`Certidão emitida com sucesso! Custo: R$ ${price.toFixed(2)}`);
       } else {
         alert(`Erro ao emitir certidão: ${data.error}`);
       }
