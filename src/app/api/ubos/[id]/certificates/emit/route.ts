@@ -185,7 +185,7 @@ export async function POST(
       .from('compliance_certificates')
       .insert({
         ubo_id: uboId,
-        company_id: ubo.company_id,
+        entity_type: 'PF',
         certificate_type: certificate_type,
         status: status,
         pdf_storage_path: pdfStoragePath,
