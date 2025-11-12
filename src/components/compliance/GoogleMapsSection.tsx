@@ -1,6 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+
+// Importar mapa interativo dinamicamente (client-side only)
+const InteractiveMap = dynamic(() => import('./InteractiveMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] bg-gray-100 rounded-lg flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">Carregando mapa...</p>
+      </div>
+    </div>
+  ),
+});
 
 interface GoogleMapsSectionProps {
   companyId: string;
@@ -121,21 +135,14 @@ export default function GoogleMapsSection({ companyId }: GoogleMapsSectionProps)
           <p className="text-gray-900">{mapsData.address}</p>
         </div>
 
-        {/* Map */}
+        {/* Interactive Map */}
         <div>
           <p className="text-sm text-gray-600 mb-2">Mapa:</p>
           <div className="relative rounded-lg overflow-hidden border border-gray-200">
-            {mapsData.mapUrl ? (
-              <img
-                src={mapsData.mapUrl}
-                alt="Mapa do endereço"
-                className="w-full h-64 object-cover"
-              />
-            ) : (
-              <div className="w-full h-64 bg-gray-100 flex items-center justify-center">
-                <p className="text-gray-500">Mapa não disponível</p>
-              </div>
-            )}
+            <InteractiveMap 
+              address={mapsData.address} 
+              className="w-full h-[400px]"
+            />
           </div>
         </div>
 
