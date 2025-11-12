@@ -234,9 +234,13 @@ export async function POST(request: Request) {
           for (const beneficiary of beneficiaries) {
             const ubo = beneficiary.beneficiaryInfo || {};
             
-            // Buscar dados completos do UBO individual (incluindo endereço E STATUS)
+            // Buscar dados completos do UBO individual (incluindo endereço, STATUS e NOME COMPLETO)
             let uboAddress = null;
             let uboStatus = 'not_submitted';  // Status padrão
+            let verifiedFirstName = ubo.firstName;
+            let verifiedMiddleName = ubo.middleName;
+            let verifiedLastName = ubo.lastName;
+            
             try {
               const uboPath = `/resources/applicants/${beneficiary.applicantId}/one`;
               const uboResponse = await sumsubRequest('GET', uboPath);
@@ -260,6 +264,35 @@ export async function POST(request: Request) {
                 console.log(`[UBO-STATUS] ${ubo.firstName} ${ubo.lastName}: ${reviewAnswer} → ${uboStatus}`);
               }
               
+              // Extrair NOME COMPLETO VERIFICADO do documento
+              // Prioridade: fixedInfo > requiredIdDocs.fields > info (fallback)
+              if (uboData.fixedInfo?.firstName || uboData.fixedInfo?.lastName) {
+                verifiedFirstName = uboData.fixedInfo.firstName || verifiedFirstName;
+                verifiedMiddleName = uboData.fixedInfo.middleName || verifiedMiddleName;
+                verifiedLastName = uboData.fixedInfo.lastName || verifiedLastName;
+                console.log(`[UBO-NAME] Usando fixedInfo: ${verifiedFirstName} ${verifiedMiddleName || ''} ${verifiedLastName}`);
+              } else if (uboData.requiredIdDocs?.docSets) {
+                // Tentar extrair dos campos do documento
+                for (const docSet of uboData.requiredIdDocs.docSets) {
+                  if (docSet.idDocSetType === 'IDENTITY' && docSet.types) {
+                    for (const type of docSet.types) {
+                      if ((type.idDocType === 'ID_CARD' || type.idDocType === 'DRIVERS') && type.fields) {
+                        const firstNameField = type.fields.find((f: any) => f.name === 'firstName');
+                        const lastNameField = type.fields.find((f: any) => f.name === 'lastName');
+                        const middleNameField = type.fields.find((f: any) => f.name === 'middleName');
+                        
+                        if (firstNameField?.value) verifiedFirstName = firstNameField.value;
+                        if (middleNameField?.value) verifiedMiddleName = middleNameField.value;
+                        if (lastNameField?.value) verifiedLastName = lastNameField.value;
+                        
+                        console.log(`[UBO-NAME] Usando documento: ${verifiedFirstName} ${verifiedMiddleName || ''} ${verifiedLastName}`);
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+              
               // Extrair endereço do UBO - tentar múltiplas fontes
               const addresses = uboData.fixedInfo?.addresses || 
                                 uboData.info?.addresses || 
@@ -277,7 +310,7 @@ export async function POST(request: Request) {
                 };
               }
             } catch (error) {
-              console.log(`[UBO-SYNC] ⚠️  Não foi possível buscar endereço do UBO ${beneficiary.applicantId}`);
+              console.log(`[UBO-SYNC] ⚠️  Não foi possível buscar dados completos do UBO ${beneficiary.applicantId}:`, error);
             }
             
             // Verificar se UBO já existe
@@ -291,9 +324,9 @@ export async function POST(request: Request) {
             const uboData = {
               company_id: applicant.id,
               applicant_id: beneficiary.applicantId,
-              first_name: ubo.firstName,
-              middle_name: ubo.middleName,
-              last_name: ubo.lastName,
+              first_name: verifiedFirstName,
+              middle_name: verifiedMiddleName,
+              last_name: verifiedLastName,
               tin: ubo.tin,
               dob: ubo.dob,
               nationality: ubo.nationality,
