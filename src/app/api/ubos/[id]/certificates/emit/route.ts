@@ -97,7 +97,15 @@ export async function POST(
         case 'pf_improbidade':
           result = await infosimples.consultarImprobidade({ cpf, nome });
           break;
-        // Nota: CEIS, CEPIM e CNEP não estão disponíveis na biblioteca InfoSimples ainda
+        case 'pf_cpf':
+          result = await infosimples.consultarCPF(cpf);
+          break;
+        case 'pf_antecedentes':
+          result = await infosimples.emitirAntecedentesCriminais(cpf, nome);
+          break;
+        case 'pf_mandados':
+          result = await infosimples.consultarMandadosPrisao(cpf, nome);
+          break;
         default:
           return NextResponse.json(
             { success: false, error: 'Tipo de certidão PF não suportado' },
@@ -169,11 +177,17 @@ export async function POST(
       .insert({
         ubo_id: uboId,
         company_id: ubo.company_id,
-        certificate_type_id: certificate_type,
+        certificate_type: certificate_type,
         status: status,
-        file_url: pdfStoragePath,
-        metadata: result.data || [],
-        issued_at: new Date().toISOString(),
+        pdf_storage_path: pdfStoragePath,
+        query_data: result.data[0] || {},
+        infosimples_service: certType.infosimples_service,
+        infosimples_price: result.header.price,
+        infosimples_response: result,
+        source: certType.source,
+        manual_url: certType.manual_url,
+        issue_date: new Date().toISOString(),
+        fetched_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -190,12 +204,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      certificate: {
-        id: certificate.id,
-        type: certType.name,
-        status: certificate.status,
-        pdfUrl: certificate.file_url,
-        issuedAt: certificate.issued_at,
+      certificate,
+      infosimples: {
+        price: result.header.price,
+        billable: result.header.billable,
       },
     });
 

@@ -51,7 +51,7 @@ export class InfoSimplesClient {
       },
       body: JSON.stringify({
         token: config?.token || this.token,
-        timeout: config?.timeout || 60,
+        timeout: config?.timeout || 600,
         ignore_site_receipt: config?.ignore_site_receipt ? 1 : 0,
         ...params,
       }),
