@@ -28,7 +28,8 @@ export function simplifyAddress(
   console.log('[SIMPLIFY] Input address:', address);
   
   // Remove detalhes complexos (Conj, Andar, Cond, etc) mas preserva rua e número
-  const streetMatch = address.match(/^(.+?)\s*-?\s*(?:Conj|Andar|Cond|Bloco|Torre|Sala)/i);
+  // Regex deve procurar por padrões que aparecem DEPOIS de vírgula ou traço
+  const streetMatch = address.match(/^(.+?)\s*[,-]\s*(?:Conj|Andar|Cond|Bloco|Torre|Sala)\b/i);
   console.log('[SIMPLIFY] streetMatch:', streetMatch);
   
   let street = address;
