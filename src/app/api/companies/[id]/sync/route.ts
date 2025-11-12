@@ -213,14 +213,11 @@ export async function POST(
           }
           
           // Extrair NOME COMPLETO VERIFICADO do documento
-          // Prioridade: fixedInfo > requiredIdDocs.fields > info (fallback)
-          if (uboData.fixedInfo?.firstName || uboData.fixedInfo?.lastName) {
-            verifiedFirstName = uboData.fixedInfo.firstName || verifiedFirstName;
-            verifiedMiddleName = uboData.fixedInfo.middleName || verifiedMiddleName;
-            verifiedLastName = uboData.fixedInfo.lastName || verifiedLastName;
-            console.log(`[UBO-NAME] Usando fixedInfo: ${verifiedFirstName} ${verifiedMiddleName || ''} ${verifiedLastName}`);
-          } else if (uboData.requiredIdDocs?.docSets) {
-            // Tentar extrair dos campos do documento
+          // Prioridade: requiredIdDocs.fields (documento) > fixedInfo > info (fallback)
+          let nameExtracted = false;
+          
+          // 1. Tentar extrair dos campos do documento PRIMEIRO (mais confiável)
+          if (uboData.requiredIdDocs?.docSets) {
             for (const docSet of uboData.requiredIdDocs.docSets) {
               if (docSet.idDocSetType === 'IDENTITY' && docSet.types) {
                 for (const type of docSet.types) {
@@ -229,16 +226,27 @@ export async function POST(
                     const lastNameField = type.fields.find((f: any) => f.name === 'lastName');
                     const middleNameField = type.fields.find((f: any) => f.name === 'middleName');
                     
-                    if (firstNameField?.value) verifiedFirstName = firstNameField.value;
-                    if (middleNameField?.value) verifiedMiddleName = middleNameField.value;
-                    if (lastNameField?.value) verifiedLastName = lastNameField.value;
-                    
-                    console.log(`[UBO-NAME] Usando documento: ${verifiedFirstName} ${verifiedMiddleName || ''} ${verifiedLastName}`);
-                    break;
+                    if (firstNameField?.value) {
+                      verifiedFirstName = firstNameField.value;
+                      verifiedMiddleName = middleNameField?.value || null;
+                      verifiedLastName = lastNameField?.value || verifiedLastName;
+                      nameExtracted = true;
+                      console.log(`[UBO-NAME] ✓ Extraído do documento: ${verifiedFirstName} ${verifiedMiddleName || ''} ${verifiedLastName}`);
+                      break;
+                    }
                   }
                 }
+                if (nameExtracted) break;
               }
             }
+          }
+          
+          // 2. Se não encontrou no documento, tentar fixedInfo
+          if (!nameExtracted && (uboData.fixedInfo?.firstName || uboData.fixedInfo?.lastName)) {
+            verifiedFirstName = uboData.fixedInfo.firstName || verifiedFirstName;
+            verifiedMiddleName = uboData.fixedInfo.middleName || verifiedMiddleName;
+            verifiedLastName = uboData.fixedInfo.lastName || verifiedLastName;
+            console.log(`[UBO-NAME] ⚠️  Usando fixedInfo (documento não disponível): ${verifiedFirstName} ${verifiedMiddleName || ''} ${verifiedLastName}`);
           }
           
           // Extrair endereço do UBO

@@ -1,43 +1,11 @@
 /**
  * Address Enrichment Library
  * 
- * Enriquece dados de endereço usando APIs externas (BrasilAPI e ViaCEP)
+ * Enriquece dados de endereço usando API dos Correios (ViaCEP)
+ * 
+ * IMPORTANTE: Não sobrescreve o endereço completo da Sumsub!
+ * Apenas complementa com dados separados (bairro, cidade, estado) via CEP.
  */
-
-interface BrasilAPIResponse {
-  uf: string;
-  cep: string;
-  qsa: any[];
-  cnpj: string;
-  pais: string | null;
-  email: string | null;
-  porte: string;
-  bairro: string;
-  numero: string;
-  ddd_fax: string;
-  municipio: string;
-  logradouro: string;
-  cnae_fiscal: number;
-  codigo_pais: number | null;
-  complemento: string;
-  codigo_porte: number;
-  razao_social: string;
-  nome_fantasia: string;
-  capital_social: number;
-  ddd_telefone_1: string;
-  ddd_telefone_2: string;
-  opcao_pelo_mei: boolean;
-  descricao_situacao_cadastral: string;
-  codigo_municipio: string;
-  situacao_especial: string;
-  opcao_pelo_simples: boolean;
-  situacao_cadastral: number;
-  data_opcao_pelo_mei: string | null;
-  data_exclusao_do_mei: string | null;
-  cnae_fiscal_descricao: string;
-  codigo_municipio_ibge: number;
-  data_inicio_atividade: string;
-}
 
 interface ViaCEPResponse {
   cep: string;
@@ -52,50 +20,13 @@ interface ViaCEPResponse {
   siafi: string;
 }
 
-export interface EnrichedAddress {
-  street: string;
-  number: string | null;
-  complement: string | null;
+export interface EnrichedAddressData {
   neighborhood: string;
   city: string;
   state: string;
   postal_code: string;
-  source: 'brasilapi' | 'viacep';
-  lat?: number;
-  lng?: number;
-}
-
-/**
- * Enriquece endereço usando CNPJ via BrasilAPI
- */
-export async function enrichAddressFromCNPJ(cnpj: string): Promise<EnrichedAddress> {
-  try {
-    // Limpar CNPJ (remover pontos, barras e hífens)
-    const cleanCNPJ = cnpj.replace(/[^\d]/g, '');
-    
-    // Consultar BrasilAPI
-    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`);
-    
-    if (!response.ok) {
-      throw new Error(`BrasilAPI returned ${response.status}: ${response.statusText}`);
-    }
-    
-    const data: BrasilAPIResponse = await response.json();
-    
-    return {
-      street: data.logradouro,
-      number: data.numero || null,
-      complement: data.complemento || null,
-      neighborhood: data.bairro,
-      city: data.municipio,
-      state: data.uf,
-      postal_code: data.cep,
-      source: 'brasilapi'
-    };
-  } catch (error) {
-    console.error('Error enriching address from CNPJ:', error);
-    throw error;
-  }
+  street_type?: string; // Tipo de logradouro (Rua, Avenida, Praça, etc)
+  source: 'viacep';
 }
 
 /**
@@ -123,12 +54,17 @@ export function extractCEP(address: string): string | null {
 }
 
 /**
- * Enriquece endereço usando CEP via ViaCEP
+ * Enriquece endereço usando CEP via ViaCEP (API dos Correios)
+ * 
+ * Retorna APENAS dados complementares (bairro, cidade, estado, tipo de logradouro)
+ * NÃO retorna o endereço completo para evitar sobrescrever dados da Sumsub
  */
-export async function enrichAddressFromCEP(cep: string): Promise<EnrichedAddress> {
+export async function enrichAddressFromCEP(cep: string): Promise<EnrichedAddressData> {
   try {
     // Limpar CEP (remover pontos e hífens)
     const cleanCEP = cep.replace(/[^\d]/g, '');
+    
+    console.log(`[Address Enrichment] Consultando ViaCEP: ${cleanCEP}`);
     
     // Consultar ViaCEP
     const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
@@ -144,53 +80,45 @@ export async function enrichAddressFromCEP(cep: string): Promise<EnrichedAddress
       throw new Error('CEP not found in ViaCEP');
     }
     
+    console.log(`[Address Enrichment] ✓ ViaCEP retornou: ${data.logradouro}, ${data.bairro}, ${data.localidade}/${data.uf}`);
+    
     return {
-      street: data.logradouro,
-      number: null, // ViaCEP não retorna número
-      complement: data.complemento || null,
       neighborhood: data.bairro,
       city: data.localidade,
       state: data.uf,
       postal_code: data.cep.replace('-', ''),
+      street_type: data.logradouro, // Ex: "Avenida Anita Garibaldi"
       source: 'viacep'
     };
   } catch (error) {
-    console.error('Error enriching address from CEP:', error);
+    console.error('[Address Enrichment] Erro ao consultar ViaCEP:', error);
     throw error;
   }
 }
 
 /**
- * Estratégia híbrida: tenta BrasilAPI primeiro, depois ViaCEP
+ * Enriquece endereço usando CEP extraído do texto
+ * 
+ * Retorna apenas dados complementares para não sobrescrever endereço da Sumsub
  */
 export async function enrichAddress(
-  cnpj: string,
-  addressText?: string
-): Promise<EnrichedAddress> {
+  addressText: string
+): Promise<EnrichedAddressData | null> {
   try {
-    // Primeira tentativa: BrasilAPI (CNPJ)
-    console.log(`[Address Enrichment] Trying BrasilAPI with CNPJ: ${cnpj}`);
-    const enriched = await enrichAddressFromCNPJ(cnpj);
-    console.log(`[Address Enrichment] Success with BrasilAPI`);
-    return enriched;
-  } catch (error) {
-    console.warn(`[Address Enrichment] BrasilAPI failed:`, error);
+    // Extrair CEP do texto
+    const cep = extractCEP(addressText);
     
-    // Fallback: ViaCEP (CEP extraído do texto)
-    if (addressText) {
-      const cep = extractCEP(addressText);
-      if (cep) {
-        try {
-          console.log(`[Address Enrichment] Trying ViaCEP with CEP: ${cep}`);
-          const enriched = await enrichAddressFromCEP(cep);
-          console.log(`[Address Enrichment] Success with ViaCEP`);
-          return enriched;
-        } catch (viacepError) {
-          console.error(`[Address Enrichment] ViaCEP also failed:`, viacepError);
-        }
-      }
+    if (!cep) {
+      console.warn('[Address Enrichment] CEP não encontrado no endereço');
+      return null;
     }
     
-    throw new Error('Failed to enrich address with both BrasilAPI and ViaCEP');
+    // Consultar ViaCEP
+    const enriched = await enrichAddressFromCEP(cep);
+    return enriched;
+    
+  } catch (error) {
+    console.error('[Address Enrichment] Falha ao enriquecer endereço:', error);
+    return null;
   }
 }

@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { enrichAddress } from '@/lib/address-enrichment';
 
-
 /**
  * POST /api/companies/[id]/enrich-address
  * 
- * Re-enriquece o endereço de uma empresa usando BrasilAPI
+ * Enriquece o endereço de uma empresa usando ViaCEP (API dos Correios)
+ * 
+ * IMPORTANTE: NÃO sobrescreve o endereço completo da Sumsub!
+ * Apenas complementa com dados separados (bairro, cidade, estado) via CEP.
  */
 export async function POST(
   request: NextRequest,
@@ -48,49 +50,55 @@ export async function POST(
       );
     }
 
-    // Verificar se tem CNPJ
-    if (!applicant.document_number) {
+    // Verificar se tem endereço
+    if (!applicant.address) {
       return NextResponse.json(
-        { error: 'CNPJ não encontrado' },
+        { error: 'Endereço não encontrado' },
         { status: 400 }
       );
     }
 
-    let enrichedAddress: any = null;
+    let enrichedData: any = null;
 
-    // Tentar enriquecer endereço (BrasilAPI/ViaCEP)
+    // Tentar enriquecer endereço via ViaCEP (usando CEP extraído)
     try {
-      enrichedAddress = await enrichAddress(
-        applicant.document_number,
-        applicant.address || undefined
-      );
+      enrichedData = await enrichAddress(applicant.address);
 
-      console.log('[Enrich Address] Successfully enriched address from API');
+      if (enrichedData) {
+        console.log('[Enrich Address] ✓ Endereço enriquecido via ViaCEP');
+      } else {
+        console.log('[Enrich Address] ⚠️  CEP não encontrado no endereço');
+      }
     } catch (enrichError: any) {
-      console.warn('[Enrich Address] Failed to enrich from API:', enrichError.message);
+      console.warn('[Enrich Address] Falha ao enriquecer via ViaCEP:', enrichError.message);
     }
-
-    // Note: Geocoding is no longer performed here.
-    // Maps API now uses address directly without coordinates.
 
     // Preparar dados para atualização
     const updateData: any = {
       enriched_at: new Date().toISOString(),
     };
 
-    // Se conseguiu enriquecer via API, salvar os dados enriquecidos
-    if (enrichedAddress) {
-      updateData.enriched_street = enrichedAddress.street;
-      updateData.enriched_number = enrichedAddress.number;
-      updateData.enriched_complement = enrichedAddress.complement;
-      updateData.enriched_neighborhood = enrichedAddress.neighborhood;
-      updateData.enriched_city = enrichedAddress.city;
-      updateData.enriched_state = enrichedAddress.state;
-      updateData.enriched_postal_code = enrichedAddress.postal_code;
-      updateData.enriched_source = enrichedAddress.source;
+    // Se conseguiu enriquecer via ViaCEP, salvar APENAS dados complementares
+    if (enrichedData) {
+      // NÃO sobrescrever o endereço completo!
+      // Apenas salvar dados separados (bairro, cidade, estado)
+      updateData.enriched_neighborhood = enrichedData.neighborhood;
+      updateData.enriched_city = enrichedData.city;
+      updateData.enriched_state = enrichedData.state;
+      updateData.enriched_postal_code = enrichedData.postal_code;
+      updateData.enriched_source = enrichedData.source;
+      
+      // Atualizar também os campos principais se estiverem vazios
+      if (!applicant.city && enrichedData.city) {
+        updateData.city = enrichedData.city;
+      }
+      if (!applicant.state && enrichedData.state) {
+        updateData.state = enrichedData.state;
+      }
+      if (!applicant.postal_code && enrichedData.postal_code) {
+        updateData.postal_code = enrichedData.postal_code;
+      }
     }
-
-
 
     // Atualizar no banco usando admin client para bypass RLS
     const adminClient = createAdminClient();
@@ -105,8 +113,10 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      enriched_address: enrichedAddress,
-      used_original_address: !enrichedAddress,
+      enriched_data: enrichedData,
+      message: enrichedData 
+        ? 'Endereço enriquecido com dados do ViaCEP' 
+        : 'CEP não encontrado, endereço não foi enriquecido',
     });
   } catch (error: any) {
     console.error('Error enriching address:', error);
