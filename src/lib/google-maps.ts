@@ -25,36 +25,28 @@ export function simplifyAddress(
   state: string,
   postalCode: string
 ): string {
-  console.log('[SIMPLIFY] Input address:', address);
-  
   // Remove detalhes complexos (Conj, Andar, Cond, etc) mas preserva rua e número
   // Regex deve procurar por padrões que aparecem DEPOIS de vírgula ou traço
   const streetMatch = address.match(/^(.+?)\s*[,-]\s*(?:Conj|Andar|Cond|Bloco|Torre|Sala)\b/i);
-  console.log('[SIMPLIFY] streetMatch:', streetMatch);
   
   let street = address;
   if (streetMatch) {
     // Se encontrou padrão complexo, usa apenas a parte antes dele
     street = streetMatch[1].trim();
-    console.log('[SIMPLIFY] Using streetMatch:', street);
   } else {
     // Se não tem padrão complexo, remove apenas CEP duplicado e detalhes extras
     // Exemplo: "R VISCONDE DE INHAUMA,00134, SAL 2001 A 2024, 20.091-901,CENTRO,RIO DE JANEIRO,RJ"
     // Mantém: "R VISCONDE DE INHAUMA,00134"
     const parts = address.split(',').map(p => p.trim());
-    console.log('[SIMPLIFY] parts:', parts);
     
     // Pegar rua e número (primeiras 2 partes)
     if (parts.length >= 2) {
       street = `${parts[0]}, ${parts[1]}`;
-      console.log('[SIMPLIFY] Using parts:', street);
     }
   }
   
   // Build simplified address: Street, City, State PostalCode
-  const result = `${street}, ${city}, ${state} ${postalCode}`;
-  console.log('[SIMPLIFY] Final result:', result);
-  return result;
+  return `${street}, ${city}, ${state} ${postalCode}`;
 }
 
 /**
@@ -66,7 +58,7 @@ export function simplifyAddress(
  * @param postalCode - Postal code
  * @param width - Image width in pixels (default: 1200)
  * @param height - Image height in pixels (default: 400)
- * @param zoom - Zoom level (default: 14)
+ * @param zoom - Zoom level (default: 17)
  * @returns URL string for the static map image
  */
 export function getStaticMapUrl(
@@ -76,7 +68,7 @@ export function getStaticMapUrl(
   postalCode: string,
   width: number = 1200,
   height: number = 400,
-  zoom: number = 14
+  zoom: number = 17  // Aumentado de 14 para 17 para melhor visualização de ruas
 ): string {
   if (!GOOGLE_MAPS_API_KEY) {
     console.warn('Google Maps API Key not configured');
@@ -92,6 +84,8 @@ export function getStaticMapUrl(
     scale: '2',  // Double resolution for better quality
     markers: `color:red|${simplifiedAddress}`,
     key: GOOGLE_MAPS_API_KEY,
+    // Cache-busting: adiciona timestamp para forçar atualização quando endereço muda
+    v: Date.now().toString(),
   });
 
   return `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;
