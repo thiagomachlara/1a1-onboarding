@@ -213,41 +213,40 @@ export async function POST(
           console.log(`[UBO-DATA-DEBUG] Resposta completa da Sumsub:`, JSON.stringify(uboData, null, 2));
           }
           
-          // Extrair NOME COMPLETO VERIFICADO do documento
-          // Prioridade: requiredIdDocs.fields (documento) > fixedInfo > info (fallback)
+          // Extrair NOME COMPLETO VERIFICADO
+          // A Sumsub retorna o nome completo no campo firstName de info (Personal data)
+          // Prioridade: info.firstName (dados verificados) > fixedInfo > beneficiaryInfo (fallback)
           let nameExtracted = false;
           
-          // 1. Tentar extrair dos campos do documento PRIMEIRO (mais confiável)
-          if (uboData.requiredIdDocs?.docSets) {
-            for (const docSet of uboData.requiredIdDocs.docSets) {
-              if (docSet.idDocSetType === 'IDENTITY' && docSet.types) {
-                for (const type of docSet.types) {
-                  if ((type.idDocType === 'ID_CARD' || type.idDocType === 'DRIVERS') && type.fields) {
-                    const firstNameField = type.fields.find((f: any) => f.name === 'firstName');
-                    const lastNameField = type.fields.find((f: any) => f.name === 'lastName');
-                    const middleNameField = type.fields.find((f: any) => f.name === 'middleName');
-                    
-                    if (firstNameField?.value) {
-                      verifiedFirstName = firstNameField.value;
-                      verifiedMiddleName = middleNameField?.value || null;
-                      verifiedLastName = lastNameField?.value || verifiedLastName;
-                      nameExtracted = true;
-                      console.log(`[UBO-NAME] ✓ Extraído do documento: ${verifiedFirstName} ${verifiedMiddleName || ''} ${verifiedLastName}`);
-                      break;
-                    }
-                  }
-                }
-                if (nameExtracted) break;
-              }
+          // 1. Tentar extrair de info.firstName (Personal data - dados verificados do documento)
+          if (uboData.info?.firstName) {
+            const fullName = uboData.info.firstName.trim();
+            // Verificar se é nome completo (tem mais de 2 palavras)
+            const nameParts = fullName.split(' ').filter(Boolean);
+            
+            if (nameParts.length >= 3) {
+              // Nome completo: "THIAGO MACHADO DE LARA"
+              verifiedFirstName = nameParts[0];
+              verifiedLastName = nameParts[nameParts.length - 1];
+              verifiedMiddleName = nameParts.slice(1, -1).join(' ');
+              nameExtracted = true;
+              console.log(`[UBO-NAME] ✓ Extraído de info.firstName: ${verifiedFirstName} ${verifiedMiddleName} ${verifiedLastName}`);
+            } else if (nameParts.length === 2) {
+              // Nome simples: "THIAGO LARA"
+              verifiedFirstName = nameParts[0];
+              verifiedLastName = nameParts[1];
+              verifiedMiddleName = null;
+              nameExtracted = true;
+              console.log(`[UBO-NAME] ✓ Extraído de info.firstName (sem nome do meio): ${verifiedFirstName} ${verifiedLastName}`);
             }
           }
           
-          // 2. Se não encontrou no documento, tentar fixedInfo
+          // 2. Se não encontrou em info, tentar fixedInfo
           if (!nameExtracted && (uboData.fixedInfo?.firstName || uboData.fixedInfo?.lastName)) {
             verifiedFirstName = uboData.fixedInfo.firstName || verifiedFirstName;
             verifiedMiddleName = uboData.fixedInfo.middleName || verifiedMiddleName;
             verifiedLastName = uboData.fixedInfo.lastName || verifiedLastName;
-            console.log(`[UBO-NAME] ⚠️  Usando fixedInfo (documento não disponível): ${verifiedFirstName} ${verifiedMiddleName || ''} ${verifiedLastName}`);
+            console.log(`[UBO-NAME] ⚠️  Usando fixedInfo: ${verifiedFirstName} ${verifiedMiddleName || ''} ${verifiedLastName}`);
           }
           
           // Extrair endereço do UBO
