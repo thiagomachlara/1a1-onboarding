@@ -32,7 +32,7 @@ export default function InteractiveMap({ address, className = '' }: InteractiveM
           libraries: ['places', 'marker'],
         });
 
-        await loader.load();
+        await loader.importLibrary('maps');
 
         if (!mapRef.current) return;
 
