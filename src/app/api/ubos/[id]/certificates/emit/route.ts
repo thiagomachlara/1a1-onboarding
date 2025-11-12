@@ -153,13 +153,15 @@ export async function POST(
               { status: 400 }
             );
           }
-          result = await infosimples.emitirAntecedentesCriminais({
+          const antecedenteParams = {
             cpf,
             nome,
             birthdate,
             nome_mae: ubo.mother_name,
             nome_pai: ubo.father_name || undefined, // Opcional
-          });
+          };
+          console.log('[UBO_EMIT] Parâmetros Antecedentes Criminais:', antecedenteParams);
+          result = await infosimples.emitirAntecedentesCriminais(antecedenteParams);
           break;
         case 'pf_mandados':
           // Requer: cpf, nome, nome_mae
