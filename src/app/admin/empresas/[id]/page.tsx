@@ -342,6 +342,7 @@ export default function CompanyDossierPage() {
   const tabs = [
     { id: 'cadastro', name: 'Cadastro', icon: '🏢' },
     { id: 'ubos', name: 'UBOs', icon: '👥', count: dossier.ubos.length },
+    { id: 'localizacao', name: 'Localização', icon: '📍' },
     { id: 'documentos', name: 'Documentos', icon: '📄', count: documents.length },
     { id: 'compliance', name: 'Compliance', icon: '✅' },
     { id: 'risco', name: 'Risco', icon: '⚠️' },
@@ -691,11 +692,18 @@ export default function CompanyDossierPage() {
                   ))}
                 </div>
               )}
-              
-              {/* Google Maps Section */}
-              <div className="mt-8">
-                <GoogleMapsSection companyId={id} />
+            </div>
+          )}
+
+          {/* Aba Localização */}
+          {activeTab === 'localizacao' && (
+            <div className="p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">📍 Localização</h2>
+                <p className="text-gray-600">Verificação geográfica do endereço da empresa</p>
               </div>
+              
+              <GoogleMapsSection companyId={id} />
             </div>
           )}
 
