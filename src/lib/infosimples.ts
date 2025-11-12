@@ -228,9 +228,11 @@ export class InfoSimplesClient {
 
   /**
    * Verifica se a resposta da API foi bem-sucedida
+   * Código 200: Sucesso
+   * Código 612: Nada Consta (sem registros encontrados - também é sucesso)
    */
   isSuccess(response: InfoSimplesResponse): boolean {
-    return response.code === 200;
+    return response.code === 200 || response.code === 612;
   }
 
   /**

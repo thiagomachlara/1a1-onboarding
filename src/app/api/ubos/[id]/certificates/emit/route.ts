@@ -139,11 +139,28 @@ export async function POST(
           result = await infosimples.consultarCPF(cpf, birthdate);
           break;
         case 'pf_antecedentes':
-          // Requer: cpf, nome, birthdate, nome_mae, nome_pai, uf_nascimento
-          return NextResponse.json(
-            { success: false, error: 'Certidão de Antecedentes Criminais requer dados adicionais (nome da mãe, pai, UF nascimento) que ainda não estão disponíveis' },
-            { status: 400 }
-          );
+          // Requer: cpf, nome, birthdate, nome_mae (obrigatórios)
+          // Opcionais: nome_pai, uf_nascimento
+          if (!birthdate) {
+            return NextResponse.json(
+              { success: false, error: 'Data de nascimento não encontrada para o UBO' },
+              { status: 400 }
+            );
+          }
+          if (!ubo.mother_name) {
+            return NextResponse.json(
+              { success: false, error: 'Certidão de Antecedentes Criminais requer nome da mãe. Por favor, adicione o nome da mãe nos dados adicionais do UBO.' },
+              { status: 400 }
+            );
+          }
+          result = await infosimples.emitirAntecedentesCriminais({
+            cpf,
+            nome,
+            birthdate,
+            nome_mae: ubo.mother_name,
+            nome_pai: ubo.father_name || undefined, // Opcional
+          });
+          break;
         case 'pf_mandados':
           // Requer: cpf, nome, nome_mae
           if (!ubo.mother_name) {
