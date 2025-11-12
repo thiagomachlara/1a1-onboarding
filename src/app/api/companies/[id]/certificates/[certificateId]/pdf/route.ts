@@ -9,6 +9,8 @@ export async function GET(
     const supabase = await createClient();
     const { id, certificateId } = await params;
 
+    console.log('[PDF] Buscando certidão:', { id, certificateId });
+
     // Buscar certidão no banco
     const { data: certificate, error: certError } = await supabase
       .from('compliance_certificates')
@@ -16,6 +18,8 @@ export async function GET(
       .eq('id', certificateId)
       .eq('company_id', id)
       .single();
+
+    console.log('[PDF] Resultado da busca:', { certificate, certError });
 
     if (certError || !certificate) {
       return NextResponse.json(
