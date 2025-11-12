@@ -315,10 +315,31 @@ export async function POST(
       }
     }
 
+    // 3. Sincronizar documentos da empresa e UBOs
+    console.log('[COMPANY-SYNC] Sincronizando documentos...');
+    let documentsCount = 0;
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/companies/${id}/documents`, {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        const docData = await response.json();
+        documentsCount = docData.total || 0;
+        console.log(`[COMPANY-SYNC] ✓ ${documentsCount} documentos sincronizados`);
+      } else {
+        console.error('[COMPANY-SYNC] Erro ao sincronizar documentos:', await response.text());
+      }
+    } catch (docError) {
+      console.error('[COMPANY-SYNC] Erro ao sincronizar documentos:', docError);
+      // Não falhar a sincronização se documentos falharem
+    }
+
     return NextResponse.json({
       success: true,
       message: hasChanges ? 'Empresa sincronizada com sucesso' : 'Empresa já está atualizada',
       result,
+      documentsCount,
     });
 
   } catch (error: any) {
