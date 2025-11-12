@@ -39,9 +39,10 @@ async function syncDocument(
     // Fazer download do documento
     const buffer = await downloadDocument(doc.inspection_id, doc.image_id);
     
-    // Determinar tipo de arquivo
-    const fileType = doc.doc_type.toLowerCase().includes('pdf') ? 'application/pdf' : 'image/jpeg';
-    const extension = fileType === 'application/pdf' ? 'pdf' : 'jpg';
+    // Determinar tipo de arquivo a partir do fileMetadata da API
+    const fileType = doc.file_type || 'jpeg'; // 'jpeg', 'png', 'pdf', etc
+    const mimeType = fileType === 'pdf' ? 'application/pdf' : `image/${fileType}`;
+    const extension = fileType;
     const fileName = `${doc.doc_type}_${doc.image_id}.${extension}`;
     
     // Upload para Supabase Storage
@@ -49,7 +50,7 @@ async function syncDocument(
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('compliance-docs')
       .upload(storagePath, buffer, {
-        contentType: fileType,
+        contentType: mimeType,
         upsert: true,
       });
 
@@ -87,7 +88,7 @@ async function syncDocument(
         review_answer: doc.review_answer,
         review_comment: doc.review_comment,
         file_name: fileName,
-        file_type: fileType,
+        file_type: mimeType,
         file_size: buffer.byteLength,
         storage_path: storagePath,
         download_url: urlData.publicUrl,
