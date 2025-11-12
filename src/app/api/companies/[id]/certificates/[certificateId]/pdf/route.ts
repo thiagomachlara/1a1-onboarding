@@ -3,17 +3,18 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; certificateId: string } }
+  { params }: { params: Promise<{ id: string; certificateId: string }> }
 ) {
   try {
     const supabase = await createClient();
+    const { id, certificateId } = await params;
 
     // Buscar certidão no banco
     const { data: certificate, error: certError } = await supabase
       .from('compliance_certificates')
       .select('pdf_storage_path')
-      .eq('id', params.certificateId)
-      .eq('company_id', params.id)
+      .eq('id', certificateId)
+      .eq('company_id', id)
       .single();
 
     if (certError || !certificate) {
