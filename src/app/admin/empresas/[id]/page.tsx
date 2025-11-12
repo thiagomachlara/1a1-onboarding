@@ -457,34 +457,30 @@ export default function CompanyDossierPage() {
                     <div className="col-span-2">
                       <h3 className="text-sm font-medium text-gray-500 mb-1">Endereço</h3>
                       <div className="space-y-1">
+                        {/* Usar endereço completo da Sumsub */}
                         <p className="text-base text-gray-900">
-                          {dossier.company.enriched_street}, {dossier.company.enriched_number}
-                          {dossier.company.enriched_complement && ` - ${dossier.company.enriched_complement}`}
+                          {dossier.company.address}
                         </p>
-                        <p className="text-sm text-gray-600">
-                          {dossier.company.enriched_neighborhood} - {dossier.company.enriched_city}/{dossier.company.enriched_state}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          CEP: {dossier.company.enriched_postal_code}
-                        </p>
+                        {/* Mostrar dados complementares enriquecidos se disponíveis */}
+                        {(dossier.company.enriched_neighborhood || dossier.company.enriched_city || dossier.company.enriched_state) && (
+                          <p className="text-sm text-gray-600">
+                            {dossier.company.enriched_neighborhood && `${dossier.company.enriched_neighborhood} - `}
+                            {dossier.company.enriched_city}/{dossier.company.enriched_state}
+                          </p>
+                        )}
+                        {dossier.company.enriched_postal_code && (
+                          <p className="text-sm text-gray-600">
+                            CEP: {dossier.company.enriched_postal_code}
+                          </p>
+                        )}
                         <div className="flex items-center gap-2 mt-2">
                           <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                           </svg>
                           <span className="text-xs text-green-600 font-medium">
-                            Endereço verificado via Receita Federal
+                            Endereço verificado via ViaCEP
                           </span>
                         </div>
-                        {dossier.company.address && (
-                          <details className="mt-3">
-                            <summary className="cursor-pointer text-xs text-gray-500 hover:text-gray-700">
-                              Ver endereço original informado pelo cliente
-                            </summary>
-                            <div className="mt-2 p-3 bg-gray-50 rounded-lg">
-                              <p className="text-sm text-gray-700">{dossier.company.address}</p>
-                            </div>
-                          </details>
-                        )}
                       </div>
                     </div>
                   </>
