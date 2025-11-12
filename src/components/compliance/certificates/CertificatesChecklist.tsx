@@ -53,6 +53,44 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
     }
   };
 
+  const viewPDF = async (certificateId: string) => {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/certificates/${certificateId}/pdf`);
+      const data = await response.json();
+
+      if (data.success && data.url) {
+        window.open(data.url, '_blank');
+      } else {
+        alert(`Erro ao abrir PDF: ${data.error}`);
+      }
+    } catch (error: any) {
+      console.error('Erro ao abrir PDF:', error);
+      alert(`Erro ao abrir PDF: ${error.message}`);
+    }
+  };
+
+  const downloadPDF = async (certificateId: string, certificateName: string) => {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/certificates/${certificateId}/pdf`);
+      const data = await response.json();
+
+      if (data.success && data.url) {
+        // Criar link temporário para download
+        const link = document.createElement('a');
+        link.href = data.url;
+        link.download = `${certificateName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        alert(`Erro ao baixar PDF: ${data.error}`);
+      }
+    } catch (error: any) {
+      console.error('Erro ao baixar PDF:', error);
+      alert(`Erro ao baixar PDF: ${error.message}`);
+    }
+  };
+
   const emitCertificate = async (certificateTypeId: string) => {
     try {
       setEmitting(certificateTypeId);
@@ -142,19 +180,19 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/4">
                 Nome
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">
                 Fonte
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">
                 Validade
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Ações
               </th>
             </tr>
@@ -166,27 +204,27 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
 
               return (
                 <tr key={type.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{type.name}</div>
                       <div className="text-sm text-gray-500">{type.description}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-4 py-4 text-sm text-gray-500">
                     {type.source}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     {getStatusBadge(certificate)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                     {certificate?.expiry_date
                       ? formatDate(certificate.expiry_date)
                       : certificate?.issue_date
                       ? formatDate(certificate.issue_date)
                       : '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-4 py-4 text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-2 flex-wrap">
                       {/* Botão Emitir via API */}
                       {type.infosimples_service && (
                         <button
@@ -217,14 +255,20 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
 
                       {/* Botão Ver PDF */}
                       {certificate?.pdf_storage_path && (
-                        <button
-                          onClick={() => {
-                            alert('Visualização de PDF em desenvolvimento');
-                          }}
-                          className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-                        >
-                          📄 Ver PDF
-                        </button>
+                        <>
+                          <button
+                            onClick={() => viewPDF(certificate.id)}
+                            className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                          >
+                            📄 Ver PDF
+                          </button>
+                          <button
+                            onClick={() => downloadPDF(certificate.id, type.name)}
+                            className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                          >
+                            ⬇️ Baixar
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
