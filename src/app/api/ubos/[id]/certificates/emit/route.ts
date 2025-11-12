@@ -69,23 +69,22 @@ export async function POST(
     const cpf = ubo.tin.replace(/\D/g, ''); // Remove formatação
     const nome = `${ubo.first_name} ${ubo.last_name}`.trim();
     
-    // Formatar data de nascimento para DDMMYYYY (sem barras)
+    // Formatar data de nascimento para YYYY-MM-DD (ISO)
     let birthdate = '';
     console.log('[UBO_EMIT] ubo.dob raw:', ubo.dob);
     if (ubo.dob) {
       // Parse manual para evitar problemas de timezone
       const dobStr = String(ubo.dob);
       if (dobStr.includes('-')) {
-        // Formato: YYYY-MM-DD -> DDMMYYYY (sem barras, formato comum em APIs brasileiras)
-        const [year, month, day] = dobStr.split('T')[0].split('-');
-        birthdate = `${day.padStart(2, '0')}${month.padStart(2, '0')}${year}`;
+        // Formato: YYYY-MM-DD (manter formato ISO)
+        birthdate = dobStr.split('T')[0]; // Remove hora se tiver
       } else {
-        // Fallback: usar Date
+        // Fallback: usar Date e formatar para ISO
         const date = new Date(ubo.dob + 'T00:00:00');
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
-        birthdate = `${day}${month}${year}`;
+        birthdate = `${year}-${month}-${day}`;
       }
       console.log('[UBO_EMIT] birthdate formatado:', birthdate);
     } else {
