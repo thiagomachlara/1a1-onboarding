@@ -23,7 +23,7 @@ export async function GET(
     // Buscar UBO
     const { data: ubo, error: uboError } = await supabase
       .from('beneficial_owners')
-      .select('id, first_name, last_name, applicant_id, company_id')
+      .select('id, first_name, middle_name, last_name, applicant_id, company_id')
       .eq('applicant_id', id)
       .single();
 
@@ -47,7 +47,7 @@ export async function GET(
       success: true,
       ubo: {
         id: ubo.id,
-        name: `${ubo.first_name} ${ubo.last_name}`.trim(),
+        name: `${ubo.first_name} ${ubo.middle_name || ''} ${ubo.last_name}`.trim().replace(/\s+/g, ' '),
         applicantId: ubo.applicant_id,
         companyId: ubo.company_id,
       },

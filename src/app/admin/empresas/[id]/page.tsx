@@ -581,7 +581,7 @@ export default function CompanyDossierPage() {
                     <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <p className="font-medium text-lg">{ubo.first_name} {ubo.last_name}</p>
+                          <p className="font-medium text-lg">{ubo.first_name} {ubo.middle_name ? ubo.middle_name + ' ' : ''}{ubo.last_name}</p>
                           {ubo.tin && <p className="text-sm text-gray-600">CPF: {ubo.tin}</p>}
                         </div>
                         {ubo.share_size && (
@@ -629,7 +629,7 @@ export default function CompanyDossierPage() {
                       )}
                       {ubo.applicant_id && (
                         <button
-                          onClick={() => handleDownloadUBOReport(ubo.applicant_id, `${ubo.first_name}_${ubo.last_name}`)}
+                          onClick={() => handleDownloadUBOReport(ubo.applicant_id, `${ubo.first_name}${ubo.middle_name ? '_' + ubo.middle_name : ''}_${ubo.last_name}`)}
                           className="mt-3 w-full px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
                         >
                           📥 Report do UBO

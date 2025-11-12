@@ -24,7 +24,7 @@ export async function POST(
     // Buscar dados do UBO
     const { data: ubo, error: uboError } = await supabase
       .from('beneficial_owners')
-      .select('tin, first_name, last_name, dob, mother_name, father_name, company_id')
+      .select('tin, first_name, middle_name, last_name, dob, mother_name, father_name, company_id')
       .eq('id', uboId)
       .single();
 
@@ -67,7 +67,7 @@ export async function POST(
 
     // Preparar dados
     const cpf = ubo.tin.replace(/\D/g, ''); // Remove formatação
-    const nome = `${ubo.first_name} ${ubo.last_name}`.trim();
+    const nome = `${ubo.first_name} ${ubo.middle_name || ''} ${ubo.last_name}`.trim().replace(/\s+/g, ' ');
     
     // Formatar data de nascimento para YYYY-MM-DD (ISO)
     let birthdate = '';
