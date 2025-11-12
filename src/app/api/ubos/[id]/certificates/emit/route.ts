@@ -24,7 +24,7 @@ export async function POST(
     // Buscar dados do UBO
     const { data: ubo, error: uboError } = await supabase
       .from('beneficial_owners')
-      .select('tin, first_name, last_name, dob, company_id')
+      .select('tin, first_name, last_name, dob, mother_name, father_name, company_id')
       .eq('id', uboId)
       .single();
 
@@ -124,10 +124,14 @@ export async function POST(
           );
         case 'pf_mandados':
           // Requer: cpf, nome, nome_mae
-          return NextResponse.json(
-            { success: false, error: 'Certidão de Mandados de Prisão requer nome da mãe que ainda não está disponível' },
-            { status: 400 }
-          );
+          if (!ubo.mother_name) {
+            return NextResponse.json(
+              { success: false, error: 'Certidão de Mandados de Prisão requer nome da mãe. Por favor, adicione o nome da mãe nos dados adicionais do UBO.' },
+              { status: 400 }
+            );
+          }
+          result = await infosimples.consultarMandadosPrisao(cpf, nome, ubo.mother_name);
+          break;
         default:
           return NextResponse.json(
             { success: false, error: 'Tipo de certidão PF não suportado' },

@@ -24,7 +24,7 @@ export async function GET(
     // Buscar UBOs do Supabase (não do Sumsub)
     const { data: ubos, error } = await supabase
       .from('beneficial_owners')
-      .select('id, first_name, last_name, tin, relation, share_size, email, phone, types, verification_status')
+      .select('id, first_name, last_name, tin, dob, mother_name, father_name, relation, share_size, email, phone, types, verification_status')
       .eq('company_id', companyId)
       .order('share_size', { ascending: false });
 
@@ -46,6 +46,9 @@ export async function GET(
         firstName: ubo.first_name,
         lastName: ubo.last_name,
         cpf: ubo.tin,
+        dob: ubo.dob ? new Date(ubo.dob).toLocaleDateString('pt-BR') : undefined,
+        motherName: ubo.mother_name,
+        fatherName: ubo.father_name,
         role: ubo.relation || 'Sócio',
         shareSize: ubo.share_size || 0,
         email: ubo.email,

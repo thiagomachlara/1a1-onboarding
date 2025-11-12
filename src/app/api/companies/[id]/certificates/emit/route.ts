@@ -107,15 +107,7 @@ export async function POST(
         case 'pf_improbidade':
           result = await infosimples.consultarImprobidade({ cnpj, nome: companyName });
           break;
-        case 'pf_cpf':
-          result = await infosimples.consultarCPF(cnpj); // cnpj aqui é na verdade CPF
-          break;
-        case 'pf_antecedentes':
-          result = await infosimples.emitirAntecedentesCriminais(cnpj, companyName);
-          break;
-        case 'pf_mandados':
-          result = await infosimples.consultarMandadosPrisao(cnpj, companyName);
-          break;
+        // Certidões PF devem ser emitidas via /api/ubos/[id]/certificates/emit
         default:
           return NextResponse.json(
             { success: false, error: 'Tipo de certidão não suportado' },
