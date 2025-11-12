@@ -87,6 +87,8 @@ export interface SumsubDocument {
   review_comment?: string;
   file_name?: string;
   file_type?: string;
+  added_date?: string;
+  source?: string;
 }
 
 /**
@@ -99,38 +101,44 @@ export async function listDocuments(applicantId: string): Promise<SumsubDocument
   try {
     console.log(`[DOCUMENTS] Listando documentos do applicant ${applicantId}...`);
     
-    const path = `/resources/applicants/${applicantId}/one`;
-    const data = await sumsubRequest('GET', path);
+    // Endpoint correto para listar documentos/imagens
+    const metadataPath = `/resources/applicants/${applicantId}/metadata/resources`;
+    const metadataResponse = await sumsubRequest('GET', metadataPath);
+    
+    // Buscar inspectionId do applicant
+    const applicantPath = `/resources/applicants/${applicantId}/one`;
+    const applicantData = await sumsubRequest('GET', applicantPath);
+    const inspectionId = applicantData.inspectionId;
 
     const documents: SumsubDocument[] = [];
     
-    if (data.requiredIdDocs?.docSets) {
-      for (const docSet of data.requiredIdDocs.docSets) {
-        const docSetType = docSet.idDocSetType;
-        
-        if (docSet.types) {
-          for (const docType of docSet.types) {
-            const idDocType = docType.idDocType;
-            
-            if (docType.imageIds) {
-              for (const imageId of docType.imageIds) {
-                documents.push({
-                  doc_set_type: docSetType,
-                  doc_type: idDocType,
-                  image_id: imageId,
-                  inspection_id: data.inspectionId,
-                  status: docType.reviewStatus || 'pending',
-                  review_answer: docType.reviewAnswer,
-                  review_comment: docType.reviewComment,
-                });
-              }
-            }
-          }
+    // A resposta tem formato: { items: [...], totalItems: N }
+    if (metadataResponse.items && Array.isArray(metadataResponse.items)) {
+      for (const item of metadataResponse.items) {
+        // Pular documentos desativados
+        if (item.deactivated) {
+          console.log(`[DOCUMENTS] Pulando documento desativado: ${item.id}`);
+          continue;
         }
+        
+        documents.push({
+          doc_set_type: item.idDocDef?.idDocSubType || 'DOCUMENT',
+          doc_type: item.idDocDef?.idDocType || 'UNKNOWN',
+          image_id: item.id,
+          inspection_id: inspectionId,
+          status: item.reviewResult?.reviewAnswer === 'GREEN' ? 'approved' : 
+                  item.reviewResult?.reviewAnswer === 'RED' ? 'rejected' : 'pending',
+          review_answer: item.reviewResult?.reviewAnswer,
+          review_comment: item.reviewResult?.moderationComment,
+          file_name: item.fileMetadata?.fileName,
+          file_type: item.fileMetadata?.fileType,
+          added_date: item.addedDate,
+          source: item.source,
+        });
       }
     }
 
-    console.log(`[DOCUMENTS] Encontrados ${documents.length} documentos`);
+    console.log(`[DOCUMENTS] Encontrados ${documents.length} documentos (total disponível: ${metadataResponse.totalItems || 0})`);
     return documents;
 
   } catch (error) {
@@ -142,13 +150,13 @@ export async function listDocuments(applicantId: string): Promise<SumsubDocument
 /**
  * Baixa um documento específico
  * 
- * @param imageId - ID da imagem no Sumsub
  * @param inspectionId - ID da inspeção no Sumsub
+ * @param imageId - ID da imagem no Sumsub
  * @returns Buffer contendo o arquivo
  */
 export async function downloadDocument(
-  imageId: string,
-  inspectionId: string
+  inspectionId: string,
+  imageId: string
 ): Promise<Buffer> {
   try {
     console.log(`[DOCUMENTS] Baixando documento ${imageId}...`);
@@ -182,7 +190,7 @@ export async function downloadAllDocuments(
 
     for (const doc of documents) {
       try {
-        const buffer = await downloadDocument(doc.image_id, doc.inspection_id);
+        const buffer = await downloadDocument(doc.inspection_id, doc.image_id);
         results.push({ document: doc, buffer });
         
         // Aguardar 200ms entre downloads
