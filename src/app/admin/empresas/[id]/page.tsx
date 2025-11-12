@@ -6,7 +6,6 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import GoogleMapsSection from '@/components/compliance/GoogleMapsSection';
 
 import { CertificatesChecklist } from '@/components/compliance/certificates/CertificatesChecklist';
-import DocumentsUploadSection from '@/components/compliance/DocumentsUploadSection';
 import toast from 'react-hot-toast';
 
 interface CompanyDossier {
@@ -707,10 +706,6 @@ export default function CompanyDossierPage() {
           {activeTab === 'compliance' && (
             <div className="p-6 space-y-8">
               <CertificatesChecklist companyId={id} />
-              
-              <hr className="border-gray-200" />
-              
-              <DocumentsUploadSection companyId={id} />
             </div>
           )}
 

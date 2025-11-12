@@ -32,6 +32,7 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [emitting, setEmitting] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null);
 
   useEffect(() => {
     loadCertificates();
@@ -116,6 +117,46 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
     } finally {
       setEmitting(null);
     }
+  };
+
+  const handleUpload = async (certificateType: string) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/pdf';
+    
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      try {
+        setUploading(certificateType);
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('certificate_type', certificateType);
+
+        const response = await fetch(`/api/companies/${companyId}/certificates/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert(data.message || 'Certidão enviada com sucesso!');
+          await loadCertificates();
+        } else {
+          alert(`Erro: ${data.error}`);
+        }
+      } catch (error: any) {
+        console.error('Erro ao fazer upload:', error);
+        alert(`Erro ao fazer upload: ${error.message}`);
+      } finally {
+        setUploading(null);
+      }
+    };
+
+    input.click();
   };
 
   const getCertificate = (typeId: string): Certificate | undefined => {
@@ -282,6 +323,24 @@ export function CertificatesChecklist({ companyId }: CertificatesChecklistProps)
                           🌐 Ver HTML
                         </button>
                       )}
+
+                      {/* Botão Upload */}
+                      <button
+                        onClick={() => handleUpload(type.id)}
+                        disabled={uploading === type.id}
+                        className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-300 rounded-md hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Fazer upload de PDF"
+                      >
+                        {uploading === type.id ? (
+                          <>
+                            ⏳ Enviando...
+                          </>
+                        ) : certificate?.pdf_storage_path ? (
+                          '🔄 Substituir'
+                        ) : (
+                          '📤 Upload'
+                        )}
+                      </button>
                     </div>
                   </td>
                 </tr>
