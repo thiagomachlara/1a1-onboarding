@@ -660,36 +660,107 @@ export default function CompanyDossierPage() {
             <div className="p-6">
               <div className="mb-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-1">Documentos</h2>
-                <p className="text-gray-600">{documents.length} documento(s) encontrado(s)</p>
+                <p className="text-gray-600">
+                  {documents.company?.length || 0} documento(s) da empresa • {documents.ubos?.length || 0} documento(s) de UBOs
+                </p>
               </div>
               
-              {documents.length === 0 ? (
+              {(!documents.company || documents.company.length === 0) && (!documents.ubos || documents.ubos.length === 0) ? (
                 <div className="text-center py-12">
                   <div className="text-gray-400 text-5xl mb-4">📄</div>
                   <p className="text-gray-500">Nenhum documento encontrado</p>
                   <p className="text-sm text-gray-400 mt-2">Execute a sincronização para buscar documentos do Sumsub</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {documents.map((doc, index) => (
-                    <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{getDocTypeLabel(doc.doc_type)}</p>
-                          <p className="text-xs text-gray-500 mt-1">{doc.doc_set_type}</p>
-                        </div>
-                        <span className={`px-2 py-1 text-xs rounded ${getStatusBadge(doc.status)}`}>
-                          {doc.status}
-                        </span>
+                <div className="space-y-8">
+                  {/* Documentos da Empresa */}
+                  {documents.company && documents.company.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <span className="mr-2">🏢</span>
+                        Documentos da Empresa ({documents.company.length})
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {documents.company.map((doc: any) => (
+                          <div key={doc.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">{getDocTypeLabel(doc.doc_type)}</p>
+                                <p className="text-xs text-gray-500 mt-1">{doc.doc_set_type}</p>
+                              </div>
+                              <span className={`px-2 py-1 text-xs rounded ${getStatusBadge(doc.review_answer || doc.status)}`}>
+                                {doc.review_answer || doc.status}
+                              </span>
+                            </div>
+                            {doc.tags && doc.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {doc.tags.slice(0, 3).map((tag: string, idx: number) => (
+                                  <span key={idx} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded">
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <a
+                              href={doc.download_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block w-full mt-3 px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 transition-colors text-center"
+                            >
+                              📥 Visualizar
+                            </a>
+                          </div>
+                        ))}
                       </div>
-                      <button
-                        onClick={() => handleDownloadDocument(doc.image_id, doc.inspection_id)}
-                        className="w-full mt-3 px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 transition-colors"
-                      >
-                        📥 Download
-                      </button>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Documentos dos UBOs */}
+                  {documents.ubos && documents.ubos.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <span className="mr-2">👤</span>
+                        Documentos dos UBOs ({documents.ubos.length})
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {documents.ubos.map((doc: any) => (
+                          <div key={doc.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">{getDocTypeLabel(doc.doc_type)}</p>
+                                <p className="text-xs text-gray-500 mt-1">{doc.doc_set_type}</p>
+                                {doc.beneficial_owners && (
+                                  <p className="text-xs text-blue-600 mt-1 font-medium">
+                                    {doc.beneficial_owners.first_name} {doc.beneficial_owners.middle_name ? doc.beneficial_owners.middle_name + ' ' : ''}{doc.beneficial_owners.last_name}
+                                  </p>
+                                )}
+                              </div>
+                              <span className={`px-2 py-1 text-xs rounded ${getStatusBadge(doc.review_answer || doc.status)}`}>
+                                {doc.review_answer || doc.status}
+                              </span>
+                            </div>
+                            {doc.tags && doc.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {doc.tags.slice(0, 3).map((tag: string, idx: number) => (
+                                  <span key={idx} className="px-2 py-0.5 bg-purple-50 text-purple-700 text-xs rounded">
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <a
+                              href={doc.download_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block w-full mt-3 px-3 py-2 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 transition-colors text-center"
+                            >
+                              📥 Visualizar
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
