@@ -10,8 +10,15 @@ import crypto from 'crypto';
  */
 export async function POST(request: Request) {
   try {
-    // Verificar permissão
+    // Verificar permissão - apenas super_admin pode criar usuários
     const currentUser = await requirePermission({ resource: 'users', action: 'create' });
+    
+    if (currentUser.role !== 'super_admin') {
+      return NextResponse.json(
+        { error: 'Apenas Super Admin pode convidar novos usuários' },
+        { status: 403 }
+      );
+    }
     
     const { email, full_name, role } = await request.json();
     

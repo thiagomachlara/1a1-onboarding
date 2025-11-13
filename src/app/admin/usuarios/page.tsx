@@ -17,6 +17,7 @@ interface AdminUser {
 export default function UsuariosPage() {
   const router = useRouter();
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteForm, setInviteForm] = useState({
@@ -27,6 +28,7 @@ export default function UsuariosPage() {
 
   useEffect(() => {
     loadUsers();
+    loadCurrentUser();
   }, []);
 
   async function loadUsers() {
@@ -38,6 +40,16 @@ export default function UsuariosPage() {
       console.error('Erro ao carregar usuários:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadCurrentUser() {
+    try {
+      const res = await fetch('/api/admin/me');
+      const data = await res.json();
+      setCurrentUser(data.user || null);
+    } catch (error) {
+      console.error('Erro ao carregar usuário atual:', error);
     }
   }
 
@@ -120,12 +132,14 @@ export default function UsuariosPage() {
           <h1 className="text-3xl font-bold text-gray-900">Usuários Admin</h1>
           <p className="text-gray-600 mt-2">Gerencie usuários e permissões do painel administrativo</p>
         </div>
-        <button
-          onClick={() => setShowInviteModal(true)}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-        >
-          + Convidar Usuário
-        </button>
+        {currentUser?.role === 'super_admin' && (
+          <button
+            onClick={() => setShowInviteModal(true)}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            + Convidar Usuário
+          </button>
+        )}
       </div>
 
       {/* Tabela de usuários */}
