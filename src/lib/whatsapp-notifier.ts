@@ -312,40 +312,72 @@ export async function sendWhatsAppNotification(
 ): Promise<{ success: boolean; error?: string }> {
   // Verificar se webhook está configurado
   if (!WHATSAPP_WEBHOOK_URL) {
-    console.warn('WHATSAPP_WEBHOOK_URL not configured, skipping notification');
+    console.warn('[WHATSAPP] WHATSAPP_WEBHOOK_URL not configured, skipping notification');
+    await logWebhookAttempt(notification, null, 'Webhook URL not configured', false);
     return { success: false, error: 'Webhook URL not configured' };
   }
+
+  let response: Response | null = null;
+  let responseBody: string | null = null;
 
   try {
     // Formatar mensagem
     const message = formatWhatsAppMessage(notification);
 
+    const payload = {
+      message,
+      event: notification.event,
+      applicantId: notification.applicant.id,
+      timestamp: notification.timestamp,
+    };
+
+    console.log('[WHATSAPP] Sending notification:', {
+      event: notification.event,
+      applicantId: notification.applicant.id,
+      retryCount,
+    });
+
     // Enviar para webhook
-    const response = await fetch(WHATSAPP_WEBHOOK_URL, {
+    response = await fetch(WHATSAPP_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        message,
-        event: notification.event,
-        applicantId: notification.applicant.id,
-        timestamp: notification.timestamp,
-      }),
+      body: JSON.stringify(payload),
     });
+
+    responseBody = await response.text();
 
     if (!response.ok) {
       throw new Error(`Webhook returned ${response.status}: ${response.statusText}`);
     }
 
-    console.log('[WHATSAPP] Notification sent successfully:', {
+    console.log('[WHATSAPP] ✅ Notification sent successfully:', {
       event: notification.event,
       applicantId: notification.applicant.id,
+      status: response.status,
     });
+
+    // Log sucesso
+    await logWebhookAttempt(notification, response.status, responseBody, true, retryCount);
 
     return { success: true };
   } catch (error) {
-    console.error('[WHATSAPP] Error sending notification:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[WHATSAPP] ❌ Error sending notification:', {
+      error: errorMessage,
+      applicantId: notification.applicant.id,
+      retryCount,
+    });
+
+    // Log erro
+    await logWebhookAttempt(
+      notification,
+      response?.status || null,
+      responseBody || errorMessage,
+      false,
+      retryCount
+    );
 
     // Retry logic
     if (retryCount < MAX_RETRIES) {
@@ -356,8 +388,38 @@ export async function sendWhatsAppNotification(
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: errorMessage,
     };
+  }
+}
+
+/**
+ * Registra tentativa de envio de webhook no banco
+ */
+async function logWebhookAttempt(
+  notification: OnboardingNotification,
+  responseStatus: number | null,
+  responseBody: string | null,
+  success: boolean,
+  retryCount: number = 0
+) {
+  try {
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabase = await createClient();
+
+    await supabase.from('webhook_logs').insert({
+      event_type: notification.event,
+      webhook_url: WHATSAPP_WEBHOOK_URL,
+      payload: notification,
+      response_status: responseStatus,
+      response_body: responseBody,
+      error_message: success ? null : responseBody,
+      retry_count: retryCount,
+      success,
+    });
+  } catch (error) {
+    console.error('[WHATSAPP] Failed to log webhook attempt:', error);
+    // Não falhar o fluxo principal se logging falhar
   }
 }
 
