@@ -10,8 +10,8 @@ export async function middleware(request: NextRequest) {
 
   // Apenas proteger rotas /admin/*
   if (request.nextUrl.pathname.startsWith('/admin')) {
-    // Permitir acesso à página de login sem autenticação
-    if (request.nextUrl.pathname === '/admin/login') {
+    // Permitir acesso à página de login e accept-invite sem autenticação
+    if (request.nextUrl.pathname === '/admin/login' || request.nextUrl.pathname === '/admin/accept-invite') {
       return response;
     }
 
