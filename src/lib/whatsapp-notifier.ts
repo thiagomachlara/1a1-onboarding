@@ -21,59 +21,21 @@ export interface OnboardingNotification {
   rejectionReason?: string; // Motivos de rejeição (rejectLabels)
   message: string;
   contractLink?: string; // Magic link para assinatura de contrato
+  walletLink?: string; // Magic link para cadastro de wallet
   sumsubReportUrl?: string; // Link para Summary Report PDF do Sumsub
   walletAddress?: string; // Endereço da wallet cadastrada
   metadata?: Record<string, any>;
 }
 
 /**
- * Formata mensagem para WhatsApp com emojis e formatação
+ * Formata cabeçalho padrão da mensagem
  */
-function formatWhatsAppMessage(notification: OnboardingNotification): string {
-  const { event, applicant, status, reviewAnswer } = notification;
-  
-  // Emoji baseado no status
-  let emoji = '📋';
-  if (status === 'approved') emoji = '✅';
-  if (status === 'rejected') emoji = '❌';
-  if (status === 'pending') emoji = '⏳';
-  if (status === 'on_hold') emoji = '⚠️';
-  if (status === 'under_review') emoji = '🔍';
-
-  // Título baseado no evento
-  let title = '';
-  switch (event) {
-    case 'applicant_created':
-      title = '🆕 *NOVO ONBOARDING INICIADO*';
-      break;
-    case 'applicant_pending':
-      title = '⏳ *DOCUMENTOS ENVIADOS*';
-      break;
-    case 'applicant_reviewed':
-      if (reviewAnswer === 'GREEN') {
-        title = '✅ *ONBOARDING APROVADO*';
-      } else if (reviewAnswer === 'RED') {
-        title = '❌ *ONBOARDING REJEITADO*';
-      } else {
-        title = '🔍 *ONBOARDING EM REVISÃO*';
-      }
-      break;
-    case 'applicant_on_hold':
-      title = '⚠️ *ONBOARDING EM ESPERA*';
-      break;
-    case 'contract_signed':
-      title = '✅ *CONTRATO ASSINADO*';
-      break;
-    case 'wallet_registered':
-      title = '💼 *WALLET CADASTRADA*';
-      break;
-  }
-
-  // Tipo de cliente
+function buildHeader(notification: OnboardingNotification): string {
+  const { applicant, timestamp } = notification;
   const tipoCliente = applicant.type === 'individual' ? 'Pessoa Física' : 'Pessoa Jurídica';
-
-  // Montar mensagem
-  let message = `${title}\n\n`;
+  const docLabel = applicant.type === 'individual' ? 'CPF' : 'CNPJ';
+  
+  let message = `${getEventTitle(notification)}\n\n`;
   message += `*Tipo:* ${tipoCliente}\n`;
   
   if (applicant.name) {
@@ -81,190 +43,264 @@ function formatWhatsAppMessage(notification: OnboardingNotification): string {
   }
   
   if (applicant.document) {
-    const docLabel = applicant.type === 'individual' ? 'CPF' : 'CNPJ';
     message += `*${docLabel}:* ${applicant.document}\n`;
   }
   
-  if (applicant.email) {
-    message += `*Email:* ${applicant.email}\n`;
-  }
-  
-  message += `*ID:* ${applicant.id}\n`;
-  message += `*Data:* ${new Date(notification.timestamp).toLocaleString('pt-BR', { 
+  message += `*Data:* ${new Date(timestamp).toLocaleString('pt-BR', { 
     timeZone: 'America/Sao_Paulo',
     dateStyle: 'short',
     timeStyle: 'medium'
   })}\n`;
   
-  // Status detalhado
-  message += `\n*Status:* ${emoji} ${getStatusLabel(status)}\n`;
-  
-  // Informações adicionais baseadas no status
-  if (status === 'approved') {
-    message += `\n✅ O cliente foi aprovado e já pode negociar USDT!`;
-    
-    // Adicionar link do Summary Report do Sumsub se disponível
-    if (notification.sumsubReportUrl) {
-      message += `\n\n📄 *Dossiê completo (Sumsub):*`;
-      message += `\n${notification.sumsubReportUrl}`;
-    }
-    
-    // Adicionar link de contrato se disponível
-    if (notification.contractLink) {
-      message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n📄 *PRÓXIMA ETAPA: CONTRATO*`;
-      message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n\n👉 *Link para assinatura:*`;
-      message += `\n${notification.contractLink}`;
-      message += `\n\n⏰ *Válido por:* 7 dias`;
-      message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n💬 *AÇÃO NECESSÁRIA*`;
-      message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n\nCopie e envie o link acima para o cliente assinar o contrato.`;
-    }
-  } else if (status === 'rejected') {
-    message += `\n❌ O onboarding foi rejeitado.`;
-    
-    // Adicionar motivos de rejeição se disponíveis
-    if (notification.rejectionReason) {
-      message += `\n\n📝 *Motivos da rejeição:*`;
-      
-      // Traduzir e formatar reject labels
-      const reasons = notification.rejectionReason.split(', ').map(reason => {
-        const translations: Record<string, string> = {
-          'DOCUMENT_TEMPLATE': '📄 Documento não corresponde ao template esperado',
-          'COMPROMISED_PERSONS': '⚠️ Pessoa comprometida (PEP, sanções, etc)',
-          'FRAUDULENT_PATTERNS': '🚫 Padrões fraudulentos detectados',
-          'SPAM': '🚫 Spam ou tentativa de fraude',
-          'GRAPHIC_EDITOR': '✏️ Documento editado digitalmente',
-          'FOREIGNER': '🌍 Estrangeiro (fora da jurisdição aceita)',
-          'BLACKLIST': '⛔ Presente em lista negra',
-          'SELFIE_MISMATCH': '🤳 Selfie não corresponde ao documento',
-          'ID_INVALID': '🆔 Documento inválido ou expirado',
-          'PROBLEMATIC_APPLICANT_DATA': '⚠️ Dados do aplicante problemáticos',
-          'ADDITIONAL_DOCUMENT_REQUIRED': '📄 Documento adicional necessário',
-          'AGE_REQUIREMENT_MISMATCH': '📅 Idade não atende aos requisitos',
-          'EXPERIENCE_REQUIRED': '💼 Experiência necessária não comprovada',
-          'DOCUMENT_PAGE_MISSING': '📄 Página do documento faltando',
-          'DOCUMENT_DAMAGED': '💥 Documento danificado ou ilegível',
-          'REGULATIONS_VIOLATIONS': '⚠️ Violações regulatórias',
-          'INCONSISTENT_PROFILE': '🔄 Perfil inconsistente',
-          'PROOF_OF_ADDRESS_INVALID': '🏠 Comprovante de endereço inválido',
-        };
-        
-        return translations[reason] || `• ${reason}`;
-      });
-      
-      message += `\n${reasons.join('\n')}`;
-    }
-    
-    // Adicionar link do Summary Report mesmo se rejeitado
-    if (notification.sumsubReportUrl) {
-      message += `\n\n📄 *Dossiê completo (Sumsub):*`;
-      message += `\n${notification.sumsubReportUrl}`;
-    }
-  } else if (status === 'pending') {
-    message += `\n⏳ Aguardando análise da equipe de compliance.`;
-    
-    // Adicionar link do Summary Report se disponível
-    if (notification.sumsubReportUrl) {
-      message += `\n\n📄 *Dossiê completo (Sumsub):*`;
-      message += `\n${notification.sumsubReportUrl}`;
-    }
-  } else if (status === 'under_review') {
-    message += `\n🔍 Documentos em análise. Pode ser necessário solicitar documentos adicionais.`;
-    
-    // Adicionar link do Summary Report se disponível
-    if (notification.sumsubReportUrl) {
-      message += `\n\n📄 *Dossiê completo (Sumsub):*`;
-      message += `\n${notification.sumsubReportUrl}`;
-    }
-  }
-
-  // Mensagens específicas para contrato e wallet
-  if (notification.event === 'contract_signed') {
-    if (notification.contractLink) {
-      message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n💼 *PRÓXIMA ETAPA: WALLET*`;
-      message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n\n👉 *Link para cadastro de wallet:*`;
-      message += `\n${notification.contractLink}`;
-      message += `\n\n⏰ *Válido por:* 30 dias`;
-      message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n💬 *AÇÃO NECESSÁRIA*`;
-      message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n\nCopie e envie o link acima para o cliente cadastrar a wallet USDT.`;
-    }
-  } else if (notification.event === 'wallet_registered') {
-    if (notification.walletAddress) {
-      message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n💼 *WALLET CADASTRADA*`;
-      message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n\n*Endereço TRC-20:*`;
-      message += `\n\`${notification.walletAddress}\``;
-      
-      // Adicionar informações do screening Chainalysis se disponível
-      if (notification.metadata?.chainalysisScreening) {
-        const screening = notification.metadata.chainalysisScreening;
-        message += `\n\n🔍 *Screening Chainalysis:*`;
-        
-        // Decisão
-        let decisionEmoji = '✅';
-        let decisionText = 'APROVADA';
-        if (screening.decision === 'REJECTED') {
-          decisionEmoji = '❌';
-          decisionText = 'REJEITADA';
-        } else if (screening.decision === 'MANUAL_REVIEW') {
-          decisionEmoji = '⚠️';
-          decisionText = 'REVISÃO MANUAL';
-        }
-        message += `\n• Decisão: ${decisionEmoji} ${decisionText}`;
-        
-        // Nível de risco
-        if (screening.riskLevel) {
-          let riskEmoji = '🟢';
-          if (screening.riskLevel === 'Medium') riskEmoji = '🟡';
-          if (screening.riskLevel === 'High' || screening.riskLevel === 'Severe') riskEmoji = '🔴';
-          message += `\n• Risco: ${riskEmoji} ${screening.riskLevel}`;
-        }
-        
-        // Sancionada
-        if (screening.isSanctioned) {
-          message += `\n• ⚠️ WALLET SANCIONADA`;
-        }
-        
-        // Link do PDF
-        if (screening.pdfUrl) {
-          message += `\n\n📄 *Relatório completo:*`;
-          message += `\n${screening.pdfUrl}`;
-        }
-      }
-      
-      message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n🔍 *AÇÃO NECESSÁRIA*`;
-      message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
-      message += `\n\n1. Revisar relatório de screening`;
-      message += `\n2. Verificar exposições de risco`;
-      message += `\n3. Aprovar ou rejeitar wallet`;
-    }
-  }
-
   return message;
 }
 
 /**
- * Retorna label amigável para o status
+ * Retorna título baseado no evento
  */
-function getStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    created: 'Criado',
-    pending: 'Pendente',
-    approved: 'Aprovado',
-    rejected: 'Rejeitado',
-    on_hold: 'Em Espera',
-    under_review: 'Em Revisão',
-  };
-  return labels[status] || status;
+function getEventTitle(notification: OnboardingNotification): string {
+  const { event, reviewAnswer } = notification;
+  
+  switch (event) {
+    case 'applicant_created':
+      return '🆕 *NOVO ONBOARDING INICIADO*';
+    case 'applicant_pending':
+      return '⏳ *DOCUMENTOS ENVIADOS*';
+    case 'applicant_reviewed':
+      if (reviewAnswer === 'GREEN') {
+        return '✅ *ONBOARDING APROVADO*';
+      } else if (reviewAnswer === 'RED') {
+        return '❌ *ONBOARDING REJEITADO*';
+      } else {
+        return '🔍 *ONBOARDING EM REVISÃO*';
+      }
+    case 'applicant_on_hold':
+      return '⚠️ *ONBOARDING EM ESPERA*';
+    case 'contract_signed':
+      return '✅ *CONTRATO ASSINADO*';
+    case 'wallet_registered':
+      return '💼 *WALLET CADASTRADA*';
+    default:
+      return '📋 *NOTIFICAÇÃO*';
+  }
+}
+
+/**
+ * Mensagem para onboarding aprovado
+ */
+function buildApplicantApprovedMessage(notification: OnboardingNotification): string {
+  let message = `\n✅ Cliente aprovado e pode negociar USDT!\n`;
+  
+  // Link do Summary Report
+  if (notification.sumsubReportUrl) {
+    message += `\n📄 *Dossiê completo (Sumsub):*`;
+    message += `\n${notification.sumsubReportUrl}`;
+  }
+  
+  // Link de contrato
+  if (notification.contractLink) {
+    message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    message += `\n📄 *PRÓXIMA ETAPA: CONTRATO*`;
+    message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    message += `\n\n👉 *Link para assinatura:*`;
+    message += `\n${notification.contractLink}`;
+    message += `\n\n⏰ *Válido por:* 7 dias`;
+    message += `\n\n💬 Copie e envie o link para o cliente.`;
+  }
+  
+  return message;
+}
+
+/**
+ * Mensagem para onboarding rejeitado
+ */
+function buildApplicantRejectedMessage(notification: OnboardingNotification): string {
+  let message = `\n❌ Onboarding foi rejeitado.\n`;
+  
+  // Motivos de rejeição
+  if (notification.rejectionReason) {
+    message += `\n📝 *Motivos da rejeição:*`;
+    
+    const reasons = notification.rejectionReason.split(', ').map(reason => {
+      const translations: Record<string, string> = {
+        'DOCUMENT_TEMPLATE': '📄 Documento não corresponde ao template',
+        'COMPROMISED_PERSONS': '⚠️ Pessoa comprometida (PEP, sanções)',
+        'FRAUDULENT_PATTERNS': '🚫 Padrões fraudulentos detectados',
+        'SPAM': '🚫 Spam ou tentativa de fraude',
+        'GRAPHIC_EDITOR': '✏️ Documento editado digitalmente',
+        'FOREIGNER': '🌍 Estrangeiro (fora da jurisdição)',
+        'BLACKLIST': '⛔ Presente em lista negra',
+        'SELFIE_MISMATCH': '🤳 Selfie não corresponde ao documento',
+        'ID_INVALID': '🆔 Documento inválido ou expirado',
+        'PROBLEMATIC_APPLICANT_DATA': '⚠️ Dados problemáticos',
+        'ADDITIONAL_DOCUMENT_REQUIRED': '📄 Documento adicional necessário',
+        'AGE_REQUIREMENT_MISMATCH': '📅 Idade não atende requisitos',
+        'DOCUMENT_PAGE_MISSING': '📄 Página do documento faltando',
+        'DOCUMENT_DAMAGED': '💥 Documento danificado ou ilegível',
+        'REGULATIONS_VIOLATIONS': '⚠️ Violações regulatórias',
+        'INCONSISTENT_PROFILE': '🔄 Perfil inconsistente',
+        'PROOF_OF_ADDRESS_INVALID': '🏠 Comprovante de endereço inválido',
+      };
+      
+      return translations[reason] || `• ${reason}`;
+    });
+    
+    message += `\n${reasons.join('\n')}`;
+  }
+  
+  // Link do Summary Report
+  if (notification.sumsubReportUrl) {
+    message += `\n\n📄 *Dossiê completo (Sumsub):*`;
+    message += `\n${notification.sumsubReportUrl}`;
+  }
+  
+  message += `\n\n💬 Entrar em contato com o cliente.`;
+  
+  return message;
+}
+
+/**
+ * Mensagem para documentos pendentes
+ */
+function buildApplicantPendingMessage(notification: OnboardingNotification): string {
+  let message = `\n⏳ Aguardando análise de compliance.\n`;
+  
+  // Link do Summary Report
+  if (notification.sumsubReportUrl) {
+    message += `\n📄 *Dossiê completo (Sumsub):*`;
+    message += `\n${notification.sumsubReportUrl}`;
+  }
+  
+  message += `\n\n💬 Revisar documentos e aprovar/rejeitar.`;
+  
+  return message;
+}
+
+/**
+ * Mensagem para contrato assinado
+ */
+function buildContractSignedMessage(notification: OnboardingNotification): string {
+  let message = `\n✅ Contrato assinado com sucesso!\n`;
+  
+  // Link de wallet
+  if (notification.walletLink) {
+    message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    message += `\n💼 *PRÓXIMA ETAPA: WALLET*`;
+    message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    message += `\n\n👉 *Link para cadastro:*`;
+    message += `\n${notification.walletLink}`;
+    message += `\n\n⏰ *Válido por:* 30 dias`;
+    message += `\n\n💬 Copie e envie o link para o cliente.`;
+  }
+  
+  return message;
+}
+
+/**
+ * Mensagem para wallet cadastrada
+ */
+function buildWalletRegisteredMessage(notification: OnboardingNotification): string {
+  let message = '';
+  
+  // Endereço da wallet
+  if (notification.walletAddress) {
+    message += `\n💼 *Endereço TRC-20:*`;
+    message += `\n\`${notification.walletAddress}\``;
+    
+    // Screening Chainalysis
+    if (notification.metadata?.chainalysisScreening) {
+      const screening = notification.metadata.chainalysisScreening;
+      message += `\n\n🔍 *Screening Chainalysis:*`;
+      
+      // Decisão
+      let decisionEmoji = '✅';
+      let decisionText = 'APROVADA';
+      if (screening.decision === 'REJECTED') {
+        decisionEmoji = '❌';
+        decisionText = 'REJEITADA';
+      } else if (screening.decision === 'MANUAL_REVIEW') {
+        decisionEmoji = '⚠️';
+        decisionText = 'REVISÃO MANUAL';
+      }
+      message += `\n• Decisão: ${decisionEmoji} ${decisionText}`;
+      
+      // Nível de risco
+      if (screening.riskLevel) {
+        let riskEmoji = '🟢';
+        if (screening.riskLevel === 'Medium') riskEmoji = '🟡';
+        if (screening.riskLevel === 'High' || screening.riskLevel === 'Severe') riskEmoji = '🔴';
+        message += `\n• Risco: ${riskEmoji} ${screening.riskLevel}`;
+      }
+      
+      // Sancionada
+      if (screening.isSanctioned) {
+        message += `\n• ⚠️ WALLET SANCIONADA`;
+      }
+      
+      // Link do PDF
+      if (screening.pdfUrl) {
+        message += `\n\n📄 *Relatório completo:*`;
+        message += `\n${screening.pdfUrl}`;
+      }
+    }
+    
+    message += `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    message += `\n✅ *ONBOARDING COMPLETO*`;
+    message += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+    message += `\n\n🎉 Cliente pronto para negociar!`;
+    message += `\n\n💬 Liberar acesso à plataforma OTC.`;
+  }
+  
+  return message;
+}
+
+/**
+ * Formata mensagem para WhatsApp com emojis e formatação
+ */
+function formatWhatsAppMessage(notification: OnboardingNotification): string {
+  const { event, reviewAnswer } = notification;
+  
+  // Cabeçalho padrão (sempre)
+  let message = buildHeader(notification);
+  
+  // Mensagem específica por evento
+  switch (event) {
+    case 'applicant_reviewed':
+      if (reviewAnswer === 'GREEN') {
+        message += buildApplicantApprovedMessage(notification);
+      } else if (reviewAnswer === 'RED') {
+        message += buildApplicantRejectedMessage(notification);
+      } else {
+        message += buildApplicantPendingMessage(notification);
+      }
+      break;
+      
+    case 'applicant_pending':
+      message += buildApplicantPendingMessage(notification);
+      break;
+      
+    case 'contract_signed':
+      message += buildContractSignedMessage(notification);
+      break;
+      
+    case 'wallet_registered':
+      message += buildWalletRegisteredMessage(notification);
+      break;
+      
+    case 'applicant_created':
+      message += `\n🆕 Novo cliente iniciou o onboarding.`;
+      break;
+      
+    case 'applicant_on_hold':
+      message += `\n⚠️ Onboarding em espera. Pode ser necessário solicitar documentos adicionais.`;
+      if (notification.sumsubReportUrl) {
+        message += `\n\n📄 *Dossiê completo (Sumsub):*`;
+        message += `\n${notification.sumsubReportUrl}`;
+      }
+      break;
+  }
+
+  return message;
 }
 
 /**
@@ -281,36 +317,39 @@ export async function sendWhatsAppNotification(
   }
 
   try {
-    // Formatar mensagem para WhatsApp
-    const whatsappMessage = formatWhatsAppMessage(notification);
+    // Formatar mensagem
+    const message = formatWhatsAppMessage(notification);
 
-    // Payload para enviar ao webhook
-    const payload = {
-      ...notification,
-      whatsapp_message: whatsappMessage,
-    };
-
-    // Fazer requisição para o webhook
+    // Enviar para webhook
     const response = await fetch(WHATSAPP_WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        message,
+        event: notification.event,
+        applicantId: notification.applicant.id,
+        timestamp: notification.timestamp,
+      }),
     });
 
     if (!response.ok) {
-      throw new Error(`Webhook returned status ${response.status}`);
+      throw new Error(`Webhook returned ${response.status}: ${response.statusText}`);
     }
 
-    console.log('WhatsApp notification sent successfully:', notification.event);
+    console.log('[WHATSAPP] Notification sent successfully:', {
+      event: notification.event,
+      applicantId: notification.applicant.id,
+    });
+
     return { success: true };
   } catch (error) {
-    console.error('Error sending WhatsApp notification:', error);
+    console.error('[WHATSAPP] Error sending notification:', error);
 
     // Retry logic
     if (retryCount < MAX_RETRIES) {
-      console.log(`Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+      console.log(`[WHATSAPP] Retrying... (${retryCount + 1}/${MAX_RETRIES})`);
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
       return sendWhatsAppNotification(notification, retryCount + 1);
     }
@@ -323,11 +362,15 @@ export async function sendWhatsAppNotification(
 }
 
 /**
- * Cria notificação para aplicante criado
+ * Helper functions para criar notificações
  */
+
 export function createApplicantCreatedNotification(data: {
   externalUserId: string;
   verificationType: 'individual' | 'company';
+  name?: string;
+  email?: string;
+  document?: string;
 }): OnboardingNotification {
   return {
     event: 'applicant_created',
@@ -335,21 +378,22 @@ export function createApplicantCreatedNotification(data: {
     applicant: {
       id: data.externalUserId,
       type: data.verificationType,
+      name: data.name,
+      email: data.email,
+      document: data.document,
     },
     status: 'created',
     message: 'Novo onboarding iniciado',
   };
 }
 
-/**
- * Cria notificação para aplicante pendente
- */
 export function createApplicantPendingNotification(data: {
   externalUserId: string;
   verificationType: 'individual' | 'company';
   name?: string;
   email?: string;
   document?: string;
+  sumsubReportUrl?: string;
 }): OnboardingNotification {
   return {
     event: 'applicant_pending',
@@ -363,12 +407,10 @@ export function createApplicantPendingNotification(data: {
     },
     status: 'pending',
     message: 'Documentos enviados para análise',
+    sumsubReportUrl: data.sumsubReportUrl,
   };
 }
 
-/**
- * Cria notificação para aplicante revisado
- */
 export function createApplicantReviewedNotification(data: {
   externalUserId: string;
   verificationType: 'individual' | 'company';
@@ -376,19 +418,19 @@ export function createApplicantReviewedNotification(data: {
   email?: string;
   document?: string;
   reviewAnswer: 'GREEN' | 'RED' | 'YELLOW';
-  reviewStatus?: string;
   rejectionReason?: string;
   contractLink?: string;
   sumsubReportUrl?: string;
 }): OnboardingNotification {
-  let status: OnboardingNotification['status'];
-  
+  let status: 'approved' | 'rejected' | 'under_review' = 'under_review';
+  let message = 'Onboarding em revisão';
+
   if (data.reviewAnswer === 'GREEN') {
     status = 'approved';
+    message = 'Onboarding aprovado';
   } else if (data.reviewAnswer === 'RED') {
     status = 'rejected';
-  } else {
-    status = 'under_review';
+    message = 'Onboarding rejeitado';
   }
 
   return {
@@ -404,21 +446,19 @@ export function createApplicantReviewedNotification(data: {
     status,
     reviewAnswer: data.reviewAnswer,
     rejectionReason: data.rejectionReason,
+    message,
     contractLink: data.contractLink,
     sumsubReportUrl: data.sumsubReportUrl,
-    message: `Onboarding ${status === 'approved' ? 'aprovado' : status === 'rejected' ? 'rejeitado' : 'em revisão'}`,
   };
 }
 
-/**
- * Cria notificação para aplicante em espera
- */
 export function createApplicantOnHoldNotification(data: {
   externalUserId: string;
   verificationType: 'individual' | 'company';
   name?: string;
   email?: string;
   document?: string;
+  sumsubReportUrl?: string;
 }): OnboardingNotification {
   return {
     event: 'applicant_on_hold',
@@ -431,15 +471,11 @@ export function createApplicantOnHoldNotification(data: {
       document: data.document,
     },
     status: 'on_hold',
-    message: 'Onboarding em espera - ação necessária',
+    message: 'Onboarding em espera',
+    sumsubReportUrl: data.sumsubReportUrl,
   };
 }
 
-
-
-/**
- * Cria notificação para contrato assinado
- */
 export function createContractSignedNotification(data: {
   externalUserId: string;
   verificationType: 'individual' | 'company';
@@ -458,19 +494,17 @@ export function createContractSignedNotification(data: {
     },
     status: 'approved',
     message: 'Contrato assinado com sucesso',
-    contractLink: data.walletLink, // Reutilizar campo para wallet link
+    walletLink: data.walletLink, // ✅ Usar walletLink específico
   };
 }
 
-/**
- * Cria notificação para wallet cadastrada
- */
 export function createWalletRegisteredNotification(data: {
   externalUserId: string;
   verificationType: 'individual' | 'company';
   name?: string;
   document?: string;
-  walletAddress: string;
+  walletAddress?: string;
+  metadata?: Record<string, any>;
 }): OnboardingNotification {
   return {
     event: 'wallet_registered',
@@ -482,50 +516,41 @@ export function createWalletRegisteredNotification(data: {
       document: data.document,
     },
     status: 'approved',
-    walletAddress: data.walletAddress,
     message: 'Wallet cadastrada com sucesso',
+    walletAddress: data.walletAddress,
+    metadata: data.metadata,
   };
 }
 
-
-/**
- * Cria notificação para screening manual de wallet
- */
 export function createWalletScreeningNotification(
-  clientName: string,
-  walletAddress: string,
+  data: {
+    externalUserId: string;
+    verificationType: 'individual' | 'company';
+    name?: string;
+    document?: string;
+    walletAddress?: string;
+  },
   screening: {
     decision: 'APPROVED' | 'REJECTED' | 'MANUAL_REVIEW';
     riskLevel?: string;
-    isSanctioned: boolean;
+    isSanctioned?: boolean;
     pdfUrl?: string;
   }
 ): OnboardingNotification {
-  // Determinar status baseado na decisão
-  let status: 'approved' | 'rejected' | 'under_review' = 'under_review';
-  if (screening.decision === 'APPROVED') status = 'approved';
-  if (screening.decision === 'REJECTED') status = 'rejected';
-
   return {
     event: 'wallet_registered',
     timestamp: new Date().toISOString(),
     applicant: {
-      id: `manual_${Date.now()}`,
-      type: 'company',
-      name: clientName,
-      // Não incluir document se não tiver valor
+      id: data.externalUserId,
+      type: data.verificationType,
+      name: data.name,
+      document: data.document,
     },
-    status,
-    walletAddress,
-    message: `Screening manual de wallet: ${screening.decision}`,
+    status: 'approved',
+    message: 'Wallet cadastrada e screening realizado',
+    walletAddress: data.walletAddress,
     metadata: {
-      chainalysisScreening: {
-        decision: screening.decision,
-        riskLevel: screening.riskLevel,
-        isSanctioned: screening.isSanctioned,
-        pdfUrl: screening.pdfUrl,
-      },
+      chainalysisScreening: screening,
     },
   };
 }
-
