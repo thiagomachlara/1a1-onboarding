@@ -601,7 +601,6 @@ async function handleApplicantReviewed(data: any) {
       email,
       document,
       reviewAnswer: reviewAnswer as 'GREEN' | 'RED' | 'YELLOW',
-      reviewStatus,
       rejectionReason,
       contractLink,
       sumsubReportUrl,
