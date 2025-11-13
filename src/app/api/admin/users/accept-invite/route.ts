@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * POST /api/admin/users/accept-invite
@@ -23,10 +23,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
+    // Criar client com service role para operações admin
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
 
     // Buscar convite
-    const { data: invite, error: inviteError } = await supabase
+    const { data: invite, error: inviteError } = await supabaseAdmin
       .from('admin_invites')
       .select('*')
       .eq('token', token)
@@ -56,13 +66,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Criar usuário no Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // Criar usuário no Supabase Auth usando admin API
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: invite.email,
       password: password,
       email_confirm: true, // Confirmar email automaticamente
       user_metadata: {
         role: invite.role,
+        full_name: invite.email, // Será atualizado depois
       },
     });
 
@@ -75,7 +86,7 @@ export async function POST(request: Request) {
     }
 
     // Ativar usuário em admin_users
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('admin_users')
       .update({ 
         is_active: true,
@@ -88,7 +99,7 @@ export async function POST(request: Request) {
     }
 
     // Marcar convite como usado
-    const { error: markUsedError } = await supabase
+    const { error: markUsedError } = await supabaseAdmin
       .from('admin_invites')
       .update({ used_at: new Date().toISOString() })
       .eq('id', invite.id);
