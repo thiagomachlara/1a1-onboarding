@@ -325,7 +325,7 @@ export async function sendWhatsAppNotification(
     const message = formatWhatsAppMessage(notification);
 
     const payload = {
-      message,
+      whatsapp_message: message,
       event: notification.event,
       applicant: notification.applicant,
       applicantId: notification.applicant.id,
