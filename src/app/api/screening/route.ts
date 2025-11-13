@@ -120,8 +120,12 @@ export async function GET(request: NextRequest) {
 
     try {
       const notification = createWalletScreeningNotification(
-        memo,
-        walletAddress,
+        {
+          externalUserId: `manual_${Date.now()}`,
+          verificationType: 'company',
+          name: memo,
+          walletAddress: walletAddress,
+        },
         {
           decision: screeningResult.decision,
           riskLevel: screeningResult.riskLevel,
