@@ -327,8 +327,14 @@ export async function sendWhatsAppNotification(
     const payload = {
       message,
       event: notification.event,
+      applicant: notification.applicant,
       applicantId: notification.applicant.id,
       timestamp: notification.timestamp,
+      status: notification.status,
+      reviewAnswer: notification.reviewAnswer,
+      contractLink: notification.contractLink,
+      walletLink: notification.walletLink,
+      sumsubReportUrl: notification.sumsubReportUrl,
     };
 
     console.log('[WHATSAPP] Sending notification:', {
