@@ -20,6 +20,8 @@ export default function UsuariosPage() {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
   const [inviteForm, setInviteForm] = useState({
     email: '',
     full_name: '',
@@ -66,8 +68,11 @@ export default function UsuariosPage() {
       const data = await res.json();
       
       if (res.ok) {
-        alert(`Convite enviado com sucesso!\n\nLink: ${data.invite.invite_link}`);
+        // Construir link completo usando window.location.origin
+        const fullLink = `${window.location.origin}/admin/accept-invite?token=${data.invite.invite_link.split('token=')[1]}`;
+        setInviteLink(fullLink);
         setShowInviteModal(false);
+        setShowSuccessModal(true);
         setInviteForm({ email: '', full_name: '', role: 'analyst' });
         loadUsers();
       } else {
@@ -281,6 +286,48 @@ export default function UsuariosPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Sucesso */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="text-center mb-4">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Convite Enviado com Sucesso!</h3>
+              <p className="text-sm text-gray-500 mb-4">Copie o link abaixo e envie para o usuário via WhatsApp ou Email.</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+              <p className="text-xs text-gray-500 mb-1">Link de Convite:</p>
+              <p className="text-sm text-gray-900 break-all font-mono">{inviteLink}</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(inviteLink);
+                  alert('Link copiado!');
+                }}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+              >
+                📋 Copiar Link
+              </button>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+              >
+                Fechar
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mt-4 text-center">⏰ Válido por 7 dias</p>
           </div>
         </div>
       )}
